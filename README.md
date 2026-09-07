@@ -95,11 +95,14 @@ pytest
   없이 동작 — 외부 한글 NLP 라이브러리 의존 없음)로 벡터화해 `GradientBoostingClassifier`로
   담당자를 예측합니다. 다만 실제 배정 이력이 아직 거의 없어(2026-09-08 기준 10건)
   부서별 전형적인 청구 문구로 만든 **합성 데이터**로 학습했습니다
-  (`app/services/recommend/synthetic_data.py`). 회사 DB 연동 이후 실제 배정 이력이
-  쌓이면 그 데이터로 재학습해야 합니다. 재학습:
-  ```bash
-  python tools/train_gbm_recommender.py
-  ```
+  (`app/services/recommend/synthetic_data.py`).
+  - **실제 이력으로 재학습하려면**: `data/training/staff_assignments.csv`를 만들고
+    (형식은 `data/training/staff_assignments.example.csv`, 자세한 안내는
+    `data/training/README.md`) `python tools/train_gbm_recommender.py`를 실행하세요.
+    이 파일이 있으면 자동으로 실제 데이터를 우선 사용합니다.
+    **`staff_assignments.csv`는 청구인의 실제 원문(개인정보)을 담으므로 반드시 그
+    파일명 그대로 만드세요** — `.gitignore`가 그 이름만 정확히 커밋에서 제외합니다
+    (이 저장소는 GitHub 공개 저장소입니다).
 - **LLM** (인터페이스만 구축, 아직 미연동): 어떤 공급자를 쓸지, API 키를 어떻게
   관리할지, 청구인 개인정보를 외부로 보내도 되는지가 아직 정해지지 않아 항상
   "준비 중" 메시지만 반환합니다(`FOIA_LLM_API_KEY` 환경변수가 설정 표면으로 미리
