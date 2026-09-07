@@ -15,15 +15,21 @@ import secrets
 import time
 
 from fastapi import Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
-from .deps import ROLE_HOME, db
+from .deps import ROLE_HOME, db, templates
 
 AUTH_COOKIE_NAME = 'foia_session'
 SESSION_MAX_AGE_SECONDS = 60 * 60 * 12
 AUTH_COOKIE_SECURE = os.getenv('FOIA_AUTH_COOKIE_SECURE', '').lower() in ('1', 'true', 'yes')
 PUBLIC_PATH_PREFIXES = ('/static/',)
 PUBLIC_PATHS = {'/health', '/favicon.ico', '/login', '/setup'}
+
+# CSRF: SameSite=Strict 쿠키가 대부분의 크로스사이트 요청을 이미 막아주지만, 명시적
+# 토큰 검증으로 방어를 한 겹 더 둔다(synchronizer token 패턴 — 서버 상태 저장 없이
+# auth_secret에서 매번 같은 값을 재계산해 비교).
+CSRF_HEADER_NAME = 'X-CSRF-Token'
+CSRF_FORM_FIELD = 'csrf_token'
 
 # 로그인 무차별 대입 방어. 단일 프로세스(uvicorn 워커 1개) 전제의 메모리 기반 구현이라
 # 서버 재시작 시 초기화된다 — 내부 소수 사용자용 도구라 이 정도로 충분하다고 판단.
@@ -170,6 +176,51 @@ def require_role_api(request: Request, *roles: str):
     return None
 
 
+def csrf_token_for(username: str | None) -> str:
+    """특정 사용자명(로그인 전이면 None → 'anonymous' 고정값)에 대한 CSRF 토큰을
+    계산한다. 서버는 저장하지 않고 매번 auth_secret으로 재계산해 비교한다 — 요청이
+    같은 origin(이 화면)에서 왔다는 걸 증명하는 용도라, 로그인 전 화면(로그인/최초
+    계정 생성)에도 똑같이 쓸 수 있다."""
+    msg = f'csrf:{username or "anonymous"}'.encode('utf-8')
+    return hmac.new(auth_secret().encode('utf-8'), msg, hashlib.sha256).hexdigest()
+
+
+def csrf_token(request: Request) -> str:
+    """현재 요청의 세션 기준 CSRF 토큰. 템플릿에서 `{{ csrf_token(request) }}`로 호출."""
+    return csrf_token_for(getattr(request.state, 'auth_user', None))
+
+
+def _csrf_valid(request: Request, provided: str | None) -> bool:
+    if not provided:
+        return False
+    return hmac.compare_digest(provided, csrf_token(request))
+
+
+def require_csrf_form(request: Request, provided: str | None):
+    """폼 기반 POST 라우트용 CSRF 가드. 통과하면 None, 막히면 403 안내 화면.
+    폼 필드로 못 받는 경우(테스트, 스크립트 클라이언트)를 위해 헤더도 대체로 허용한다
+    — 실제 브라우저 폼 제출은 커스텀 헤더를 못 붙이므로 폼 필드가 기본 경로다."""
+    token = provided or request.headers.get(CSRF_HEADER_NAME)
+    if _csrf_valid(request, token):
+        return None
+    return HTMLResponse(
+        '<p>요청이 만료되었거나 보안 토큰이 유효하지 않습니다. 이전 화면으로 돌아가 '
+        '새로고침한 뒤 다시 시도해주세요.</p>',
+        status_code=403,
+    )
+
+
+def require_csrf_api(request: Request):
+    """JSON API POST 라우트용 CSRF 가드. 통과하면 None, 막히면 403 JSON."""
+    provided = request.headers.get(CSRF_HEADER_NAME)
+    if _csrf_valid(request, provided):
+        return None
+    return JSONResponse(
+        {'success': False, 'message': '요청이 만료되었습니다. 새로고침 후 다시 시도해주세요.'},
+        status_code=403,
+    )
+
+
 async def read_json_body(request: Request) -> dict | None:
     """POST 바디를 JSON으로 파싱한다. 잘못된 형식(비어있음, 깨진 인코딩 등)이면 예외를
     올리지 않고 None을 반환 — 호출부에서 500 대신 깔끔한 400으로 응답하게 한다."""
@@ -178,3 +229,6 @@ async def read_json_body(request: Request) -> dict | None:
     except Exception:
         return None
     return data if isinstance(data, dict) else None
+
+
+templates.env.globals['csrf_token'] = csrf_token

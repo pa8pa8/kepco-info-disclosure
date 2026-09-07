@@ -7,6 +7,11 @@ const NOTICE_TONE = {
   '정보부존재': 'precursor', '진정질의': 'info', '종결': 'unknown',
 };
 
+function getCsrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.content : '';
+}
+
 function emptyState(icon, text, hint) {
   return `<div class="empty-state">
     <div class="empty-state-icon" aria-hidden="true">${icon}</div>
@@ -120,7 +125,7 @@ async function runScan() {
   const btn = document.getElementById('btn-scan');
   if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
   try {
-    const res = await fetch('/api/watch/scan', { method: 'POST' });
+    const res = await fetch('/api/watch/scan', { method: 'POST', headers: { 'X-CSRF-Token': getCsrfToken() } });
     const data = await res.json();
     showToast(`감시 폴더 스캔 완료 — 신규 접수: ${data.new_requests}`);
     const badge = document.getElementById('last-scan-badge');
@@ -159,7 +164,7 @@ async function extendDeadline(requestId) {
   try {
     const res = await fetch(`/api/requests/${requestId}/extend-deadline`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
       body: JSON.stringify({ reason }),
     });
     const data = await res.json();
@@ -181,7 +186,7 @@ async function decideStep(requestId, stepKey, answer) {
   try {
     const res = await fetch(`/api/requests/${requestId}/decide`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
       body: JSON.stringify({ step: stepKey, answer }),
     });
     const data = await res.json();
@@ -203,7 +208,7 @@ async function assignRequestTo(requestId, assignedTo) {
   try {
     const res = await fetch(`/api/requests/${requestId}/assign`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
       body: JSON.stringify({ assigned_to: assignedTo }),
     });
     const data = await res.json();
@@ -322,7 +327,7 @@ async function submitReject(requestId) {
   try {
     const res = await fetch(`/api/requests/${requestId}/reject`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
       body: JSON.stringify({ candidates: Array.from(selections) }),
     });
     const data = await res.json();
@@ -352,7 +357,7 @@ function initAllStaffSearches() {
 async function recommendStaff(requestId, btn) {
   if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
   try {
-    const res = await fetch(`/api/requests/${requestId}/recommend`, { method: 'POST' });
+    const res = await fetch(`/api/requests/${requestId}/recommend`, { method: 'POST', headers: { 'X-CSRF-Token': getCsrfToken() } });
     const data = await res.json();
     if (!data.success) {
       showToast(data.message || 'AI 판단에 실패했습니다.', true);
@@ -403,7 +408,7 @@ function renderNoResult(requestId, message) {
 
 async function generateRecommendation(requestId) {
   try {
-    const res = await fetch(`/api/requests/${requestId}/generate-recommendation`, { method: 'POST' });
+    const res = await fetch(`/api/requests/${requestId}/generate-recommendation`, { method: 'POST', headers: { 'X-CSRF-Token': getCsrfToken() } });
     const data = await res.json();
     showToast(data.message || '요청을 처리했습니다.', !data.success);
   } catch (e) {

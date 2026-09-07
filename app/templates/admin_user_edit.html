@@ -9,6 +9,7 @@
     <div class="auth-error">{{ error }}</div>
     {% endif %}
     <form class="settings-form" method="post" action="/admin/users/{{ target['id'] }}/edit">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}" />
         <label>아이디 <span class="field-help">— 변경 불가(배정·이력 참조 때문)</span>
             <input type="text" value="{{ target['username'] }}" disabled />
         </label>

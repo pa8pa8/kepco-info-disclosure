@@ -12,7 +12,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from .. import roles
 from ..config import APP_TITLE
 from ..deps import db, load_ai_recommendation, load_recommendation, templates, with_deadline
-from ..security import read_json_body, require_role, require_role_api, role_home
+from ..security import read_json_body, require_csrf_api, require_role, require_role_api, role_home
 from ..services import foia_core
 
 router = APIRouter()
@@ -172,6 +172,9 @@ async def api_recommend(request_id: int, request: Request):
     guard = require_role_api(request, roles.DISPATCHER, roles.MANAGER)
     if guard:
         return guard
+    guard = require_csrf_api(request)
+    if guard:
+        return guard
     row = db.get_request(request_id)
     if not row:
         return JSONResponse({'success': False, 'message': '청구를 찾을 수 없습니다.'}, status_code=404)
@@ -201,6 +204,9 @@ async def api_generate_recommendation(request_id: int, request: Request):
     guard = require_role_api(request, roles.DISPATCHER, roles.MANAGER)
     if guard:
         return guard
+    guard = require_csrf_api(request)
+    if guard:
+        return guard
     return JSONResponse({
         'success': False,
         'message': '이 데모에서는 사전에 준비된 예시 5건에 한해서만 AI 판단 결과를 확인할 수 있습니다. 실제 AI 연동은 추후 적용될 예정입니다.',
@@ -210,6 +216,9 @@ async def api_generate_recommendation(request_id: int, request: Request):
 @router.post('/api/requests/{request_id}/assign')
 async def api_assign(request_id: int, request: Request):
     guard = require_role_api(request, roles.DISPATCHER, roles.MANAGER)
+    if guard:
+        return guard
+    guard = require_csrf_api(request)
     if guard:
         return guard
     data = await read_json_body(request)
@@ -243,6 +252,9 @@ async def api_reject(request_id: int, request: Request):
     돌리기)는 지원하지 않는다 — 반드시 1~3명의 재배정 후보를 지명해야 하며, 그 후보들이
     배정 대기 화면에 추천으로 표시되어 배정담당자/총괄관리자가 최종 확정한다."""
     guard = require_role_api(request, roles.STAFF)
+    if guard:
+        return guard
+    guard = require_csrf_api(request)
     if guard:
         return guard
     row = db.get_request(request_id)
@@ -283,6 +295,9 @@ async def api_extend_deadline(request_id: int, request: Request):
     guard = require_role_api(request, roles.MANAGER, roles.STAFF)
     if guard:
         return guard
+    guard = require_csrf_api(request)
+    if guard:
+        return guard
     row = db.get_request(request_id)
     if not row:
         return JSONResponse({'success': False, 'message': '청구를 찾을 수 없습니다.'}, status_code=404)
@@ -315,6 +330,9 @@ async def api_requests(request: Request, limit: int = Query(default=50, ge=1, le
 @router.post('/api/requests/{request_id}/decide')
 async def api_decide(request_id: int, request: Request):
     guard = require_role_api(request, roles.MANAGER, roles.STAFF)
+    if guard:
+        return guard
+    guard = require_csrf_api(request)
     if guard:
         return guard
 

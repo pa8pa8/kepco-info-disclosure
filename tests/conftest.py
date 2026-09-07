@@ -19,6 +19,7 @@ import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app.main import app  # noqa: E402
+from app.security import csrf_token_for  # noqa: E402
 
 TRANSACTIONAL_TABLES = ('decision_log', 'request_decisions', 'disclosure_requests')
 
@@ -44,52 +45,64 @@ def _lifespan():
         yield
 
 
+def _new_client() -> TestClient:
+    """CSRF 헤더를 기본으로 얹은 새 TestClient. 폼 기반 라우트는 실제로는 hidden
+    input(`csrf_token`)을 읽지만, 헤더도 대체 경로로 허용하므로(`require_csrf_form`
+    참고) 테스트는 매 POST마다 폼 데이터에 토큰을 끼워넣지 않고 헤더 하나로 통일한다.
+    로그인 전이라 'anonymous' 토큰으로 시작 — `login()`이 성공 후 실제 사용자명
+    토큰으로 갱신한다."""
+    c = TestClient(app, cookies={})
+    c.headers['X-CSRF-Token'] = csrf_token_for(None)
+    return c
+
+
 @pytest.fixture
 def client(_lifespan):
     """매 테스트마다 새 쿠키 저장소를 가진 TestClient. 청구/판단 관련 테이블도 전후로 비운다
     — 계정 테이블은 세션 내내 유지."""
     _clear_transactional_tables()
-    yield TestClient(app, cookies={})
+    yield _new_client()
     _clear_transactional_tables()
 
 
 def login(client: TestClient, username: str, password: str) -> TestClient:
     resp = client.post('/login', data={'username': username, 'password': password}, follow_redirects=False)
     assert resp.status_code == 303, f'login failed for {username}: {resp.status_code} {resp.text[:200]}'
+    client.headers['X-CSRF-Token'] = csrf_token_for(username)
     return client
 
 
 @pytest.fixture
 def as_admin(client):
-    s = TestClient(app, cookies={})
+    s = _new_client()
     login(s, 'admin', 'admin')
     return s
 
 
 @pytest.fixture
 def as_manager(client):
-    s = TestClient(app, cookies={})
+    s = _new_client()
     login(s, 'manager', 'manager')
     return s
 
 
 @pytest.fixture
 def as_dispatcher(client):
-    s = TestClient(app, cookies={})
+    s = _new_client()
     login(s, 'dispatcher', 'dispatcher')
     return s
 
 
 @pytest.fixture
 def as_staff1(client):
-    s = TestClient(app, cookies={})
+    s = _new_client()
     login(s, 'staff1', 'staff1')
     return s
 
 
 @pytest.fixture
 def as_staff2(client):
-    s = TestClient(app, cookies={})
+    s = _new_client()
     login(s, 'staff2', 'staff2')
     return s
 

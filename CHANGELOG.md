@@ -264,3 +264,24 @@ Claude와 번갈아 작업하는 협업 구조에서 Codex가 진행한 작업. 
 - Codex가 세션 종료 시 커밋하지 않고 남긴 작업 트리 변경분을 다음 세션에서 Claude가
   diff 전수 검토 후 커밋. 직전 세션(FOIA-0019)의 `dispatcher_limited_view` 로직이
   스타일 변경 과정에서 훼손되지 않았는지 등을 확인.
+
+## v1.8 (2026-09-08) — CSRF 토큰 검증, 죽은 코드 정리
+
+상세 근거는 `logs/changes/2026-09-08/FOIA-0024-*.md` 참고.
+
+### CSRF 토큰 검증 (FOIA-0024)
+- `docs/PROJECT_REVIEW.md`에 "낮음" 심각도로 남아있던 CSRF 부재 해결. Synchronizer
+  token 패턴 — 서버 저장 없이 `auth_secret()`에서 사용자명 기준으로 매번 재계산.
+  상태 변경 POST 전부(폼 8개 + JSON API 7개)에 적용. 폼은 hidden `csrf_token` input,
+  JS fetch는 `<meta name="csrf-token">`을 읽어 `X-CSRF-Token` 헤더로 전달.
+  `tests/test_csrf.py` 신규 7개(토큰 없음/위조/정상 각각 검증) — 전체 41개 통과.
+
+### admin.py 도달 불가능한 분기 제거 (FOIA-0024)
+- FOIA-0020에서 발견해 판단을 미뤄뒀던 "마지막 시스템관리자 삭제 방지" 별도 체크 제거
+  — 자기 자신 삭제 금지 체크 하나로 이미 완전히 막혀 있던 논리적으로 도달 불가능한
+  분기였음(왜 안전한지는 코드 주석으로 남김). 계정 **수정**의 동일 이름 체크는 실제로
+  도달 가능하고 필요한 로직이라 그대로 둠.
+
+### 남은 것
+- `docs/PROJECT_REVIEW.md` "실배포 전 필수" 우선순위 1에 유일하게 남은 항목: 기본
+  데모 계정 비밀번호 변경 유도.

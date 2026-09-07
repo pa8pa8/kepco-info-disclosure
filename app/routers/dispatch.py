@@ -11,7 +11,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from .. import roles
 from ..config import APP_TITLE
 from ..deps import db, load_recommendation, processor, templates, with_deadline
-from ..security import require_role, require_role_api
+from ..security import require_csrf_api, require_role, require_role_api
 from ..services import foia_core
 
 router = APIRouter()
@@ -74,6 +74,9 @@ async def requester_history(request: Request, name: str = ''):
 @router.post('/api/watch/scan')
 async def api_watch_scan(request: Request):
     guard = require_role_api(request, roles.DISPATCHER, roles.MANAGER)
+    if guard:
+        return guard
+    guard = require_csrf_api(request)
     if guard:
         return guard
     result = await processor.scan_once()

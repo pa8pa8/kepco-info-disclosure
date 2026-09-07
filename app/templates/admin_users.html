@@ -11,9 +11,6 @@
 {% if request.query_params.get('error') == 'self' %}
 <div class="toast error" id="err-toast">자기 자신의 계정은 삭제할 수 없습니다.</div>
 <script>setTimeout(function(){ var t=document.getElementById('err-toast'); if(t) t.remove(); }, 4000);</script>
-{% elif request.query_params.get('error') == 'lastadmin' %}
-<div class="toast error" id="err-toast">마지막 남은 시스템관리자 계정은 삭제할 수 없습니다.</div>
-<script>setTimeout(function(){ var t=document.getElementById('err-toast'); if(t) t.remove(); }, 4000);</script>
 {% endif %}
 
 <div class="dashboard-grid">
@@ -37,6 +34,7 @@
                             <a href="/admin/users/{{ u['id'] }}/edit" class="btn-toggle">수정</a>
                             {% if u['username'] != request.state.auth_user %}
                             <form method="post" action="/admin/users/{{ u['id'] }}/delete" onsubmit="return confirm('{{ u['username'] }} 계정을 삭제할까요?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}" />
                                 <button type="submit" class="btn-danger">삭제</button>
                             </form>
                             {% endif %}
@@ -55,6 +53,7 @@
         <div class="auth-error">{{ error }}</div>
         {% endif %}
         <form class="settings-form" method="post" action="/admin/users">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}" />
             <label>아이디
                 <input type="text" name="username" required minlength="3" autofocus />
             </label>

@@ -17,6 +17,7 @@
             <div class="auth-error" role="alert">{{ error }}</div>
             {% endif %}
             <form method="post" action="/setup" class="auth-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}" />
                 <label>
                     아이디
                     <input type="text" name="username" value="{{ username or '' }}" autocomplete="username" required minlength="3" autofocus />

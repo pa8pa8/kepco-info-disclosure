@@ -14,6 +14,7 @@ from ..security import (
     login_lockout_remaining,
     register_login_failure,
     register_login_success,
+    require_csrf_form,
     role_home,
     safe_next_path,
     set_auth_cookie,
@@ -40,9 +41,13 @@ async def setup_admin(
     username: str = Form(...),
     password: str = Form(...),
     password_confirm: str = Form(...),
+    csrf_token: str = Form(''),
 ):
     if admin_configured():
         return RedirectResponse('/login', status_code=303)
+    guard = require_csrf_form(request, csrf_token)
+    if guard:
+        return guard
     username = username.strip()
     error = ''
     if len(username) < 3:
@@ -82,7 +87,16 @@ async def login_page(request: Request, next: str = '/'):
 
 
 @router.post('/login')
-async def login(request: Request, username: str = Form(...), password: str = Form(...), next: str = Form('/')):
+async def login(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    next: str = Form('/'),
+    csrf_token: str = Form(''),
+):
+    guard = require_csrf_form(request, csrf_token)
+    if guard:
+        return guard
     username = username.strip()
     locked_seconds = login_lockout_remaining(username)
     if locked_seconds > 0:
@@ -115,7 +129,10 @@ async def login(request: Request, username: str = Form(...), password: str = For
 
 
 @router.post('/logout')
-async def logout():
+async def logout(request: Request, csrf_token: str = Form('')):
+    guard = require_csrf_form(request, csrf_token)
+    if guard:
+        return guard
     response = RedirectResponse('/login', status_code=303)
     response.delete_cookie(AUTH_COOKIE_NAME)
     return response

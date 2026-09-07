@@ -8,6 +8,7 @@
     <div class="panel">
         <div class="panel-header"><h2>시스템 설정</h2></div>
         <form class="settings-form" method="post" action="/settings/general">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}" />
             <label>청구서 자동 수집 경로
                 <input type="text" name="watch_dir" value="{{ settings.get('watch_dir', '') }}" placeholder="예: C:\FOIA\watch" />
             </label>
@@ -26,6 +27,7 @@
     <div class="panel">
         <div class="panel-header"><h2>내장 AI 연동 테스트</h2></div>
         <form id="ai-test-form" class="settings-form" onsubmit="return testAI(event)">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}" />
             <label>테스트 청구 내용
                 <textarea name="raw_text">개인정보 관련 열람 청구 자료 요청드립니다.</textarea>
             </label>
@@ -38,6 +40,7 @@
 <div class="panel" style="margin-top:18px">
     <div class="panel-header"><h2>통지서 문구 템플릿</h2></div>
     <form class="settings-form" method="post" action="/settings/notice-templates">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}" />
         {% for key, label in notice_labels_pairs %}
         <label>{{ label }}
             <textarea name="notice_template_{{ key }}">{{ settings.get('notice_template_' ~ key, '') }}</textarea>

@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from .. import roles
 from ..config import APP_TITLE
 from ..deps import db, templates
-from ..security import hash_password, require_role
+from ..security import hash_password, require_csrf_form, require_role
 
 router = APIRouter()
 
@@ -34,8 +34,12 @@ async def admin_users_create(
     region: str = Form(''),
     branch: str = Form(''),
     department: str = Form(''),
+    csrf_token: str = Form(''),
 ):
     guard = require_role(request, roles.ADMIN)
+    if guard:
+        return guard
+    guard = require_csrf_form(request, csrf_token)
     if guard:
         return guard
     username = username.strip()
@@ -60,8 +64,11 @@ async def admin_users_create(
 
 
 @router.post('/admin/users/{user_id}/delete')
-async def admin_users_delete(request: Request, user_id: int):
+async def admin_users_delete(request: Request, user_id: int, csrf_token: str = Form('')):
     guard = require_role(request, roles.ADMIN)
+    if guard:
+        return guard
+    guard = require_csrf_form(request, csrf_token)
     if guard:
         return guard
     target = db.get_user_by_id(user_id)
@@ -69,8 +76,11 @@ async def admin_users_delete(request: Request, user_id: int):
         return RedirectResponse('/admin/users', status_code=303)
     if target['username'] == request.state.auth_user:
         return RedirectResponse('/admin/users?error=self', status_code=303)
-    if target['role'] == roles.ADMIN and db.count_users_by_role(roles.ADMIN) <= 1:
-        return RedirectResponse('/admin/users?error=lastadmin', status_code=303)
+    # "마지막 관리자 삭제 방지"는 별도 체크가 필요 없다 — 이 라우트는 관리자만 오고
+    # (require_role), 위에서 target이 본인이 아님을 이미 확인했다. target이 관리자
+    # 역할이면 그 시점에 관리자가 최소 2명(본인+target)이라는 뜻이라 "마지막 관리자를
+    # 지운다"는 상황 자체가 성립하지 않는다. 예전엔 이걸 다시 확인하는 도달 불가능한
+    # 분기가 있었다(FOIA-0020에서 테스트 작성 중 발견, 정리는 여기서 FOIA-0024).
     db.delete_user(user_id)
     return RedirectResponse('/admin/users?deleted=1', status_code=303)
 
@@ -99,8 +109,12 @@ async def admin_users_edit_submit(
     branch: str = Form(''),
     department: str = Form(''),
     password: str = Form(''),
+    csrf_token: str = Form(''),
 ):
     guard = require_role(request, roles.ADMIN)
+    if guard:
+        return guard
+    guard = require_csrf_form(request, csrf_token)
     if guard:
         return guard
     target = db.get_user_by_id(user_id)

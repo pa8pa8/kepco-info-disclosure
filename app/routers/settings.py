@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from .. import roles
 from ..config import APP_TITLE, INTERNAL_AI_API_URL
 from ..deps import ai_client, current_settings, db, templates
-from ..security import require_role, require_role_api
+from ..security import require_csrf_form, require_role, require_role_api
 from ..services import foia_core
 from ..services.ai_client import AIClient
 
@@ -35,8 +35,17 @@ async def settings_page(request: Request):
 
 
 @router.post('/settings/general')
-async def update_settings(request: Request, watch_dir: str = Form(...), scan_interval: int = Form(60), nondisclosure_keywords: str = Form('')):
+async def update_settings(
+    request: Request,
+    watch_dir: str = Form(...),
+    scan_interval: int = Form(60),
+    nondisclosure_keywords: str = Form(''),
+    csrf_token: str = Form(''),
+):
     guard = require_role(request, roles.MANAGER)
+    if guard:
+        return guard
+    guard = require_csrf_form(request, csrf_token)
     if guard:
         return guard
     db.set_setting('watch_dir', watch_dir.strip())
@@ -52,6 +61,9 @@ async def update_notice_templates(request: Request):
     if guard:
         return guard
     form = await request.form()
+    guard = require_csrf_form(request, form.get('csrf_token'))
+    if guard:
+        return guard
     for notice_type in foia_core.NOTICE_LABELS:
         key = f'notice_template_{notice_type}'
         if key in form:
@@ -60,8 +72,15 @@ async def update_notice_templates(request: Request):
 
 
 @router.post('/settings/test-ai')
-async def test_ai_connection(request: Request, raw_text: str = Form('개인정보 관련 열람 청구 자료 요청드립니다.')):
+async def test_ai_connection(
+    request: Request,
+    raw_text: str = Form('개인정보 관련 열람 청구 자료 요청드립니다.'),
+    csrf_token: str = Form(''),
+):
     guard = require_role_api(request, roles.MANAGER)
+    if guard:
+        return guard
+    guard = require_csrf_form(request, csrf_token)
     if guard:
         return guard
     payload = {'raw_text': raw_text, 'nondisclosure_keywords': [], 'history': []}
