@@ -57,11 +57,14 @@ class GBMRecommender:
         if not ranked:
             return unavailable(self.source, '추천할 수 있는 업무담당자 계정이 없습니다.')
 
-        confidence = ' · '.join(f'{name} {p * 100:.0f}%' for name, p in ranked)
+        # 순위(1·2·3순위)까지만 보여준다. 모델이 내놓는 확률 수치는 실제 배정 이력이
+        # 아니라 우리가 직접 만든 합성 데이터를 얼마나 잘 재현하는지를 반영할 뿐이라,
+        # "78%" 같은 숫자를 화면에 보여주면 실제 정확도처럼 오해하기 쉽다 — 그래서 뺐다.
         return {
             'available': True,
             'source': self.source,
             'recommendations': [name for name, _ in ranked],
-            'reason': f'GradientBoost 예측 신뢰도 — {confidence} (⚠ 실제 배정 이력이 아직 부족해 합성 데이터로 학습된 모델입니다)',
+            'reason': 'GradientBoost 추천 순위입니다. ⚠ 실제 배정 이력이 아직 부족해 합성 '
+                      '데이터로 학습된 모델이라 정확도가 검증되지 않았습니다 — 참고용으로만 활용하세요.',
             'message': '',
         }
