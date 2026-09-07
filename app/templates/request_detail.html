@@ -5,60 +5,7 @@
         <h2>청구 #{{ item['id'] }} — {{ item['requester_name'] }}</h2>
         <a href="{{ '/dispatch' if request.state.auth_role == '배정담당자' else '/requests' }}" class="btn-toggle">목록으로</a>
     </div>
-    <div class="metric-split">
-        <div class="metric-box">
-            <h3>접수 정보</h3>
-            <div class="log-sub">접수시각: {{ item['received_at'] }}</div>
-            <div class="log-sub">제출형식: {{ item['channel'] }}</div>
-            <div class="log-sub">연락처: {{ item['requester_contact'] or '-' }}</div>
-            <div class="log-sub">상태: <span class="status-pill unknown">{{ item['status'] }}</span></div>
-            <div class="log-sub">
-                배정: {% if item['assigned_to'] %}<strong>{{ item['assigned_to'] }}</strong> ({{ item['assigned_at'] }}){% else %}<span class="text-warning">배정 대기중</span>{% endif %}
-            </div>
-            {% if request.state.auth_role in ('배정담당자', '총괄관리자') %}
-            <div class="log-sub">
-                <a href="/requester-history?name={{ item['requester_name'] | urlencode }}" class="link-more">이 청구인 이력 보기 →</a>
-            </div>
-            {% endif %}
-            {% if deadline_info %}
-            <div class="log-sub">
-                처리기한: <span class="status-pill {{ deadline_info.tone }}">{{ deadline_info.label }}</span>
-                {% if deadline_info.extended %}<span class="log-sub">(1회 연장됨)</span>{% endif %}
-            </div>
-            {% if can_extend %}
-            <button type="button" class="btn-toggle content-gap" onclick="extendDeadline({{ item['id'] }})">기한 연장 (+10일)</button>
-            {% endif %}
-            {% endif %}
-        </div>
-        <div class="metric-box">
-            <h3>AI 식별 결과</h3>
-            <div class="log-sub">요청대상: <strong>{{ item['request_target'] or '식별 중' }}</strong></div>
-            <div class="log-sub">요약: {{ item['ai_summary'] or '-' }}</div>
-            {% if not dispatcher_limited_view %}
-            {% if hints.get('is_petition_hint') %}
-            <div class="log-sub text-warning">⚠ 진정·질의 가능성 있음 (AI 제안)</div>
-            {% endif %}
-            {% if hints.get('nondisclosure_keywords_matched') %}
-            <div class="log-sub text-danger">⚠ 비공개 사유 키워드 매칭: {{ hints.get('nondisclosure_keywords_matched') | join(', ') }}</div>
-            {% endif %}
-            {% endif %}
-        </div>
-        {% if not dispatcher_limited_view %}
-        <div class="metric-box">
-            <h3>반복 청구 판정</h3>
-            {% if decision and decision['is_repeat'] %}
-            <div class="log-sub text-danger">반복 청구로 자동 판정됨</div>
-            {% if repeat_match_row %}
-            <div class="log-sub">유사 청구: <a href="/requests/{{ repeat_match_row['id'] }}">#{{ repeat_match_row['id'] }} {{ repeat_match_row['requester_name'] }}</a></div>
-            {% endif %}
-            {% else %}
-            <div class="log-sub text-success">신규 청구로 판정됨</div>
-            {% endif %}
-        </div>
-        {% endif %}
-    </div>
-
-    <div class="panel-header section-gap"><h2>청구 원문</h2></div>
+    <div class="dispatch-label">청구 원문</div>
     <pre class="result-box">{{ item['raw_text'] }}</pre>
 </div>
 
@@ -233,6 +180,62 @@
                 </tbody>
             </table>
         </div>
+    </div>
+</div>
+
+<div class="panel section-gap">
+    <div class="panel-header"><h2>참고 정보</h2></div>
+    <div class="metric-split">
+        <div class="metric-box">
+            <h3>접수 정보</h3>
+            <div class="log-sub">접수시각: {{ item['received_at'] }}</div>
+            <div class="log-sub">제출형식: {{ item['channel'] }}</div>
+            <div class="log-sub">연락처: {{ item['requester_contact'] or '-' }}</div>
+            <div class="log-sub">상태: <span class="status-pill unknown">{{ item['status'] }}</span></div>
+            <div class="log-sub">
+                배정: {% if item['assigned_to'] %}<strong>{{ item['assigned_to'] }}</strong> ({{ item['assigned_at'] }}){% else %}<span class="text-warning">배정 대기중</span>{% endif %}
+            </div>
+            {% if request.state.auth_role in ('배정담당자', '총괄관리자') %}
+            <div class="log-sub">
+                <a href="/requester-history?name={{ item['requester_name'] | urlencode }}" class="link-more">이 청구인 이력 보기 →</a>
+            </div>
+            {% endif %}
+            {% if deadline_info %}
+            <div class="log-sub">
+                처리기한: <span class="status-pill {{ deadline_info.tone }}">{{ deadline_info.label }}</span>
+                {% if deadline_info.extended %}<span class="log-sub">(1회 연장됨)</span>{% endif %}
+            </div>
+            {% if can_extend %}
+            <button type="button" class="btn-toggle content-gap" onclick="extendDeadline({{ item['id'] }})">기한 연장 (+10일)</button>
+            {% endif %}
+            {% endif %}
+        </div>
+        <div class="metric-box">
+            <h3>AI 식별 결과</h3>
+            <div class="log-sub">요청대상: <strong>{{ item['request_target'] or '식별 중' }}</strong></div>
+            <div class="log-sub">요약: {{ item['ai_summary'] or '-' }}</div>
+            {% if not dispatcher_limited_view %}
+            {% if hints.get('is_petition_hint') %}
+            <div class="log-sub text-warning">⚠ 진정·질의 가능성 있음 (AI 제안)</div>
+            {% endif %}
+            {% if hints.get('nondisclosure_keywords_matched') %}
+            <div class="log-sub text-danger">⚠ 비공개 사유 키워드 매칭: {{ hints.get('nondisclosure_keywords_matched') | join(', ') }}</div>
+            {% endif %}
+            {% endif %}
+        </div>
+        {% if not dispatcher_limited_view %}
+        <div class="metric-box">
+            <h3>반복 청구 판정</h3>
+            {% if decision and decision['is_repeat'] %}
+            <div class="log-sub text-danger">반복 청구로 자동 판정됨</div>
+            {% if repeat_match_row %}
+            <div class="log-sub">유사 청구: <a href="/requests/{{ repeat_match_row['id'] }}">#{{ repeat_match_row['id'] }} {{ repeat_match_row['requester_name'] }}</a></div>
+            {% endif %}
+            {% else %}
+            <div class="log-sub text-success">신규 청구로 판정됨</div>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
