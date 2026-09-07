@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="dashboard-grid">
+    <div class="panel">
+        <div class="panel-header"><h2>정보공개 청구 접수</h2></div>
+        <form class="settings-form" method="post" action="/requests/new">
+            <label>청구인 성명
+                <input type="text" name="requester_name" required placeholder="예: 홍길동" />
+            </label>
+            <label>연락처(선택)
+                <input type="text" name="requester_contact" placeholder="예: 010-0000-0000 / email" />
+            </label>
+            <label>제출 형식
+                <select name="channel">
+                    <option value="텍스트">텍스트</option>
+                    <option value="PDF">PDF</option>
+                    <option value="HWPX">HWPX</option>
+                    <option value="txt">txt</option>
+                    <option value="excel">excel</option>
+                </select>
+            </label>
+            <label>청구 내용
+                <textarea name="raw_text" required placeholder="청구인이 제출한 정보공개 청구 내용을 그대로 입력(또는 붙여넣기)하세요."></textarea>
+            </label>
+            <button class="btn-primary" type="submit">접수 및 AI 식별 실행</button>
+        </form>
+    </div>
+    <div class="panel">
+        <div class="panel-header"><h2>AI 역할 안내</h2></div>
+        <div class="notice">
+            접수 즉시 내장 AI가 다음 두 가지를 자동으로 수행합니다.
+        </div>
+        <div class="ai-guide-list">
+            <div class="ai-guide-card">
+                <div class="ai-guide-head"><strong>1. 청구 내용 식별</strong></div>
+                <div class="ai-guide-action">제출된 원문을 요약하고, 판단에 필요한 핵심 문장을 정리합니다.</div>
+            </div>
+            <div class="ai-guide-card">
+                <div class="ai-guide-head"><strong>2. '요청대상' 식별 + 반복 청구 판정</strong></div>
+                <div class="ai-guide-action">청구 내용 중 실제 요청 대상을 추출하고, 과거 접수 이력과 비교해 반복 청구 여부(제11조의2)까지 자동 판정합니다. 이후 단계(정보 해당 여부 · 진정질의 여부 · 정보부존재 · 비공개 대상 · 부분공개 가능 여부)는 상세 화면에서 담당자가 직접 판단합니다.</div>
+            </div>
+        </div>
+        <div class="notice" style="margin-top:14px">
+            <code>data/watch</code> 폴더에 <code>YYYYMMDD_청구인명.txt</code> 형식 파일(1행: <code>청구인: 이름</code>,
+            2행: <code>연락처: ...</code>, 3행: <code>---</code>, 이후 본문)을 넣어두면 자동으로 접수됩니다.
+        </div>
+    </div>
+</div>
+{% endblock %}

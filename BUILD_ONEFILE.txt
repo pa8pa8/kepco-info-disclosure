@@ -1,0 +1,23 @@
+[권장] 먼저 기존 빌드 산출물 삭제
+rmdir /s /q build
+rmdir /s /q dist
+if exist INFO_DISCLOSURE_System.spec del /f /q INFO_DISCLOSURE_System.spec
+
+[가상환경 생성]
+python -m venv venv
+venv\Scripts\activate
+
+[패키지 설치]
+pip install -r requirements.txt
+pip install pyinstaller
+
+[onefile 빌드 - 권장]
+pyinstaller --onefile --name INFO_DISCLOSURE_System --add-data "app\templates;app\templates" --add-data "app\static;app\static" --add-data "data;data" launcher.py
+
+[실행]
+cd dist
+INFO_DISCLOSURE_System.exe
+
+[참고]
+- 그래도 import 관련 오류가 나면 아래 옵션으로 재빌드
+pyinstaller --onefile --name INFO_DISCLOSURE_System --hidden-import app.main --hidden-import app.db --hidden-import app.config --hidden-import app.services.ai_client --hidden-import app.services.request_processor --hidden-import app.ai_runtime.api --add-data "app\templates;app\templates" --add-data "app\static;app\static" --add-data "data;data" launcher.py

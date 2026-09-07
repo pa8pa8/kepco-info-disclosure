@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="panel">
+    <div class="panel-header">
+        <h2>청구 #{{ item['id'] }} — {{ item['requester_name'] }}</h2>
+        <a href="/requests" class="btn-toggle">목록으로</a>
+    </div>
+    <div class="metric-split">
+        <div class="metric-box">
+            <h3>접수 정보</h3>
+            <div class="log-sub">접수시각: {{ item['received_at'] }}</div>
+            <div class="log-sub">제출형식: {{ item['channel'] }}</div>
+            <div class="log-sub">연락처: {{ item['requester_contact'] or '-' }}</div>
+            <div class="log-sub">상태: <span class="status-pill unknown">{{ item['status'] }}</span></div>
+            <div class="log-sub">
+                배정: {% if item['assigned_to'] %}<strong>{{ item['assigned_to'] }}</strong> ({{ item['assigned_at'] }}){% else %}<span style="color:var(--warn)">배정 대기중</span>{% endif %}
+            </div>
+        </div>
+        <div class="metric-box">
+            <h3>AI 식별 결과</h3>
+            <div class="log-sub">요청대상: <strong>{{ item['request_target'] or '식별 중' }}</strong></div>
+            <div class="log-sub">요약: {{ item['ai_summary'] or '-' }}</div>
+            {% if hints.get('is_petition_hint') %}
+            <div class="log-sub" style="color:var(--warn)">⚠ 진정·질의 가능성 있음 (AI 제안)</div>
+            {% endif %}
+            {% if hints.get('nondisclosure_keywords_matched') %}
+            <div class="log-sub" style="color:var(--danger)">⚠ 비공개 사유 키워드 매칭: {{ hints.get('nondisclosure_keywords_matched') | join(', ') }}</div>
+            {% endif %}
+        </div>
+        <div class="metric-box">
+            <h3>반복 청구 판정</h3>
+            {% if decision and decision['is_repeat'] %}
+            <div class="log-sub" style="color:var(--danger)">반복 청구로 자동 판정됨</div>
+            {% if repeat_match_row %}
+            <div class="log-sub">유사 청구: <a href="/requests/{{ repeat_match_row['id'] }}">#{{ repeat_match_row['id'] }} {{ repeat_match_row['requester_name'] }}</a></div>
+            {% endif %}
+            {% else %}
+            <div class="log-sub" style="color:var(--ok)">신규 청구로 판정됨</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="panel-header" style="margin-top:20px"><h2>청구 원문</h2></div>
+    <pre class="result-box">{{ item['raw_text'] }}</pre>
+</div>
+
+<div class="dashboard-grid" style="margin-top:18px">
+    <div class="panel">
+        <div class="panel-header"><h2>판단 경로</h2></div>
+        {% if not trail %}
+        <div class="notice">아직 판단이 시작되지 않았습니다.</div>
+        {% endif %}
+        <div class="event-log-list">
+            {% for step in trail %}
+            <div class="log-row {{ 'fault' if not step.answer else '' }}">
+                <div class="log-time">{{ step.article or '-' }}</div>
+                <div class="log-server">{{ 'Y' if step.answer else 'N' }}</div>
+                <div class="log-summary">{{ step.label }}</div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if decision and decision['final_notice_type'] %}
+        <div class="panel-header" style="margin-top:18px"><h3>최종 통지</h3></div>
+        <div class="ai-guide-card">
+            <div class="ai-guide-head">
+                <span class="status-pill {{ notice_tone.get(decision['final_notice_type'], 'unknown') }}">{{ notice_labels.get(decision['final_notice_type']) }}</span>
+                <span class="log-sub">결정자: {{ decision['decided_by'] or '-' }}</span>
+            </div>
+            <div class="ai-guide-action" style="white-space:pre-wrap">{{ decision['notice_text'] }}</div>
+        </div>
+        {% elif can_assign %}
+        <div class="panel-header" style="margin-top:18px"><h3>담당자 배정</h3></div>
+        <div class="ai-guide-card" id="dispatch-row-{{ item['id'] }}">
+            <div class="ai-guide-summary">이 청구를 처리할 업무담당자를 지정하세요. 배정 후에는 해당 담당자만 판단을 진행할 수 있습니다.</div>
+            {% if staff_directory %}
+            <script>window.STAFF_DIRECTORY = {{ staff_directory | tojson }};</script>
+            <div id="ai-result-{{ item['id'] }}" class="assign-recommend" {% if not ai_result %}style="display:none"{% endif %}>
+                {% if ai_result %}
+                <div class="assign-panel-hint">🤖 AI 판단 결과 — 추천 담당자를 선택하면 바로 배정됩니다.</div>
+                {% if ai_result.recommendations %}
+                <button class="rank-primary" onclick="assignRequestTo({{ item['id'] }}, '{{ ai_result.recommendations[0] }}')">
+                    <span><span class="rank-badge">1순위</span>{{ ai_result.recommendations[0] }}</span><span>→</span>
+                </button>
+                {% if ai_result.recommendations|length > 1 %}
+                <div class="rank-secondary-row">
+                    {% for name in ai_result.recommendations[1:3] %}
+                    <button class="rank-secondary" onclick="assignRequestTo({{ item['id'] }}, '{{ name }}')">
+                        <span class="rank-badge">{{ loop.index + 1 }}순위</span>{{ name }}
+                    </button>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endif %}
+                {% if ai_result.reason %}<div class="assign-reason">추천 사유: {{ ai_result.reason }}</div>{% endif %}
+                {% endif %}
+            </div>
+            <div style="margin-top:10px">
+                {% if not ai_result %}
+                <button class="btn-toggle" style="width:100%;text-align:center;padding:11px;font-size:13px" onclick="recommendStaff({{ item['id'] }}, this)">🤖 AI 판단하기</button>
+                {% endif %}
+                <div class="dispatch-label" style="margin-top:14px">담당자 검색</div>
+                <div class="staff-search-wrap">
+                    <input type="text" class="staff-search-input" data-request-id="{{ item['id'] }}"
+                           oninput="filterStaffSearch({{ item['id'] }})"
+                           placeholder="이름·지역본부·지사·부서로 검색" />
+                    <div id="staff-results-{{ item['id'] }}" class="staff-search-results"></div>
+                </div>
+            </div>
+            {% else %}
+            <div class="auth-error" style="margin-top:10px">등록된 업무담당자 계정이 없습니다. 시스템관리자에게 계정 생성을 요청하세요.</div>
+            {% endif %}
+        </div>
+        {% elif step_info and can_decide %}
+        <div class="panel-header" style="margin-top:18px"><h3>다음 판단</h3></div>
+        <div class="ai-guide-card" id="decision-wizard" data-request-id="{{ item['id'] }}" data-step="{{ step_key }}">
+            <div class="ai-guide-head">
+                <strong>{{ step_info.label }}</strong>
+                {% if step_info.article %}<span class="badge">{{ step_info.article }}</span>{% endif %}
+            </div>
+            {% if step_info.note %}
+            <div class="ai-guide-summary">{{ step_info.note }}</div>
+            {% endif %}
+            <div style="display:flex;gap:10px;margin-top:12px">
+                <button class="btn-primary" onclick="decideStep({{ item['id'] }}, '{{ step_key }}', true)">예 (Y)</button>
+                <button class="btn-toggle" onclick="decideStep({{ item['id'] }}, '{{ step_key }}', false)">아니오 (N)</button>
+            </div>
+        </div>
+        {% elif step_info %}
+        <div class="panel-header" style="margin-top:18px"><h3>다음 판단</h3></div>
+        <div class="notice">배정 대기 중입니다. 배정담당자가 업무담당자를 지정하면 처리할 수 있습니다.</div>
+        {% endif %}
+    </div>
+
+    <div class="panel">
+        <div class="panel-header"><h2>처리 이력</h2></div>
+        <div class="list-scroll">
+            <table class="table compact">
+                <thead><tr><th>시각</th><th>단계</th><th>답변</th><th>담당자</th></tr></thead>
+                <tbody>
+                    {% for log in log_rows %}
+                    <tr>
+                        <td>{{ log['created_at'] }}</td>
+                        <td>{{ log['step_label'] }}</td>
+                        <td>{{ log['answer'] }}</td>
+                        <td>{{ log['actor'] }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4">이력이 없습니다.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

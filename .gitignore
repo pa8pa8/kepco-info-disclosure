@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+
+# 런타임에 생성되는 로컬 상태 (소스 아님)
+data/info_disclosure.db
+data/ai_log.jsonl
+.installed
+
+# 오래된 백업 zip (app/ 소스와 중복, 최신화되지 않음)
+app/app.zip
+
+# 빌드 산출물
+build/
+dist/
+*.spec.bak
+
+# 가상환경
+venv/
+.venv/

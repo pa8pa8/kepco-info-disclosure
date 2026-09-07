@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>정보공개 청구 처리 흐름도</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --bg:#eef2f1; --panel:#ffffff; --panel-2:#f4f7f6; --border:#d7e0dd;
+    --text:#16211f; --muted:#5b6d68; --accent:#0f7d80; --accent-ink:#ffffff; --accent-soft:#dcefee;
+    --ok:#1f9d55; --ok-soft:#e4f6ea; --warn:#c77d11; --warn-soft:#fbeeda;
+    --prec:#c5580f; --prec-soft:#fbe8db; --fault:#c23b3b; --fault-soft:#fbe1e1;
+    --neutral:#4a5a63; --neutral-soft:#eef1f2;
+    --shadow: 0 1px 2px rgba(15,40,36,.06), 0 8px 24px -12px rgba(15,40,36,.18);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0a1412; --panel:#0f1c1a; --panel-2:#132523; --border:#1e3532;
+      --text:#e7f1ee; --muted:#8fa7a1; --accent:#4fd8d0; --accent-ink:#08211f; --accent-soft:#123331;
+      --ok:#49c97e; --ok-soft:#12291d; --warn:#e2a94c; --warn-soft:#2c2112;
+      --prec:#e2884c; --prec-soft:#2c1c12; --fault:#ea6a6a; --fault-soft:#2c1414;
+      --neutral:#9db3ac; --neutral-soft:#152624;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 28px -12px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0a1412; --panel:#0f1c1a; --panel-2:#132523; --border:#1e3532;
+    --text:#e7f1ee; --muted:#8fa7a1; --accent:#4fd8d0; --accent-ink:#08211f; --accent-soft:#123331;
+    --ok:#49c97e; --ok-soft:#12291d; --warn:#e2a94c; --warn-soft:#2c2112;
+    --prec:#e2884c; --prec-soft:#2c1c12; --fault:#ea6a6a; --fault-soft:#2c1414;
+    --neutral:#9db3ac; --neutral-soft:#152624;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 28px -12px rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:"IBM Plex Sans KR","Malgun Gothic",sans-serif; line-height:1.7; font-size:16px;
+  }
+  code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+  main{max-width:1240px;margin:0 auto;padding:48px clamp(16px,4vw,56px) 100px}
+  .kicker{display:inline-flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.09em;font-size:11.5px;font-weight:600;color:var(--accent);margin-bottom:12px}
+  .kicker::before{content:"";width:16px;height:2px;background:var(--accent);display:inline-block}
+  h1{font-size:clamp(26px,3.6vw,36px);margin:0 0 10px;font-weight:700}
+  .sub{color:var(--muted);font-size:15.5px;max-width:70ch;margin:0 0 28px}
+  .meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+  .meta-chip{font-size:12px;font-family:"IBM Plex Mono",monospace;color:var(--muted);background:var(--panel-2);border:1px solid var(--border);padding:5px 10px;border-radius:999px}
+  .callout{border:1px solid var(--border);border-left:3px solid var(--accent);background:var(--panel-2);border-radius:10px;padding:14px 18px;margin:22px 0 34px;font-size:14px;color:var(--text)}
+  .callout b{color:var(--accent)}
+
+  h2{font-size:20px;margin:44px 0 4px}
+  .section-sub{color:var(--muted);font-size:14px;margin:0 0 18px;max-width:70ch}
+
+  /* ---- flowchart ---- */
+  figure{margin:0}
+  .flow-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:16px;background:var(--panel);box-shadow:var(--shadow);padding:8px}
+  .flow{position:relative;width:1180px;height:1150px}
+  .fc-box{
+    position:absolute;border:1.5px solid var(--border);background:var(--panel-2);
+    border-radius:10px;padding:10px 14px;font-size:13.5px;font-weight:600;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.45;
+    overflow:hidden;
+  }
+  .fc-box.spine{background:var(--panel)}
+  .fc-box .sub{font-size:11.2px;font-weight:400;color:var(--muted);display:block;margin-top:6px;max-width:70ch}
+  .fc-box .list{font-size:11px;font-weight:400;color:var(--muted);text-align:left;margin-top:6px;line-height:1.55}
+  .fc-tag{position:absolute;font-size:11px;color:var(--muted);max-width:260px;line-height:1.4}
+  .fc-note{position:absolute;font-size:10.6px;color:var(--muted);font-style:italic;max-width:230px;line-height:1.4}
+  .fc-actor{
+    position:absolute;border:1.5px solid var(--accent);background:var(--accent-soft);
+    border-radius:10px;padding:10px 14px;font-size:13.5px;font-weight:700;color:var(--text);
+    display:flex;align-items:center;justify-content:center;text-align:center;
+  }
+  .fc-label{position:absolute;font-size:11.5px;color:var(--muted);text-align:center;line-height:1.5}
+  .fc-yn{position:absolute;font-size:11px;font-weight:700;color:var(--muted);background:var(--panel);padding:1px 5px;border-radius:4px}
+  .fc-outcome{position:absolute;font-size:14.5px;font-weight:700;display:flex;align-items:center;gap:6px}
+  .fc-outcome::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;flex:0 0 auto}
+  .fc-outcome.ok{color:var(--ok)} .fc-outcome.warn{color:var(--warn)} .fc-outcome.fault{color:var(--fault)}
+  .fc-outcome.prec{color:var(--prec)} .fc-outcome.accent{color:var(--accent)} .fc-outcome.neutral{color:var(--neutral)}
+  svg.fc-lines{position:absolute;inset:0;width:100%;height:100%;overflow:visible;color:var(--muted)}
+  svg.fc-lines path{fill:none;stroke:currentColor;stroke-width:1.6}
+
+  /* ---- legend / table ---- */
+  .legend{display:flex;flex-wrap:wrap;gap:10px 20px;margin:16px 0 8px;font-size:12.8px;color:var(--muted)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .table-wrap{overflow-x:auto;margin:18px 0;border:1px solid var(--border);border-radius:12px}
+  table{border-collapse:collapse;width:100%;font-size:13.6px;min-width:560px}
+  thead th{background:var(--panel-2);text-align:left;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--border);color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+  tbody td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:nth-child(even){background:var(--panel-2)}
+  figcaption{margin-top:14px;font-size:13px;color:var(--muted)}
+  .foot{margin-top:64px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:12.4px}
+</style>
+</head>
+<body>
+<main>
+  <div class="kicker">정보공개 청구 처리 · Process Flowchart</div>
+  <h1>정보공개 청구 처리 흐름도</h1>
+  <p class="sub">
+    한국전력공사 정보공개 청구 접수부터 공개·부분공개·비공개 통지까지의 판단 절차를
+    <code>blueprint.jpeg</code>(현장 문서 사진) 원본을 바탕으로 디지털 다이어그램으로
+    다시 그린 문서입니다. 각 판단 단계는 「공공기관의 정보공개에 관한 법률」 조문을 근거로 합니다.
+  </p>
+  <div class="meta-row">
+    <span class="meta-chip">원본: blueprint.jpeg</span>
+    <span class="meta-chip">형식 변환: HTML (디지털 재작도)</span>
+    <span class="meta-chip">근거 법령: 공공기관의 정보공개에 관한 법률</span>
+  </div>
+  <div class="callout">
+    <b>참고</b> — 이 흐름도는 사진 속 손글씨·인쇄 도표를 그대로 옮겨 그린 것이며, 별도의 법률
+    자문 없이 원본 문서 표기를 그대로 전사했습니다. 실제 처리 기준은 원본 문서와 관계 법령을
+    기준으로 재확인하시기 바랍니다.
+  </div>
+
+  <h2>처리 흐름도</h2>
+  <p class="section-sub">
+    청구인이 접수한 요청을 AI가 1차로 식별한 뒤, 6단계 판단을 거쳐 6가지 통지 유형 중 하나로
+    귀결됩니다. 각 판단 박스 위의 회색 글씨는 근거 조문입니다.
+  </p>
+
+  <figure>
+    <div class="flow-scroll">
+      <div class="flow" role="group" aria-label="정보공개 청구 처리 절차 다이어그램">
+
+        <!-- actors -->
+        <div class="fc-actor" style="left:20px;top:20px;width:190px;height:60px">정보공개 청구인</div>
+        <div class="fc-actor" style="left:480px;top:20px;width:200px;height:60px">한국전력공사<br>담당자</div>
+        <div class="fc-label" style="left:230px;top:2px;width:240px">정보공개 청구<br>(텍스트, PDF, HWPX, txt, excel 등 제출)</div>
+        <div class="fc-label" style="left:230px;top:58px;width:240px"><b>AI 역할</b> — 1. 청구 내용 식별&nbsp; 2. 청구 내용 중 '요청대상' 식별</div>
+        <div class="fc-label" style="left:600px;top:96px;width:160px;text-align:left">'요청대상'이....</div>
+
+        <!-- S0 repeat request branch -->
+        <div class="fc-tag" style="left:760px;top:84px;width:240px">제11조의2 (기존 통지한 사항과 동일한 답변을 할 수밖에 없는 경우)</div>
+        <div class="fc-box" style="left:760px;top:106px;width:230px;height:64px">반복 청구 대상인가?</div>
+        <div class="fc-outcome neutral" style="left:1030px;top:130px">종결 통지서</div>
+
+        <!-- N1 -->
+        <div class="fc-tag" style="left:20px;top:256px;width:200px">제2조(정의)</div>
+        <div class="fc-box spine" style="left:20px;top:280px;width:240px;height:100px">
+          이 법에서 정한 '정보'인가?<span class="sub">ex) 기록물, 매체, 영상 등</span>
+        </div>
+
+        <!-- S1 진정·질의 -->
+        <div class="fc-tag" style="left:460px;top:264px;width:260px">제11조 제5항 제2호(이 법에 따른 '정보'로 볼 수 없는, 진정·질의에 해당하는 경우)</div>
+        <div class="fc-box" style="left:460px;top:290px;width:250px;height:90px">진정·질의인가?</div>
+        <div class="fc-note" style="left:900px;top:288px">「정보공개법」이 아닌<br>「민원처리에 관한 법률」 의거 답변</div>
+        <div class="fc-outcome accent" style="left:900px;top:318px">진정·질의 통지서</div>
+
+        <!-- N2 정보부존재 -->
+        <div class="fc-tag" style="left:20px;top:426px;width:240px">제11조 제5항 제1호(부존재)</div>
+        <div class="fc-box spine" style="left:20px;top:450px;width:240px;height:150px">
+          '정보부존재' 인가?
+          <span class="list">공공기관이 정보를<br>1. 생산·접수하지 않은 경우<br>2. 가공·취합해야 하는 경우<br>3. 포괄적 청구인 경우<br>4. 기록물 관리법 등 기타 기한이 만료된 경우</span>
+        </div>
+        <div class="fc-note" style="left:900px;top:488px">「정보공개법」이 아닌<br>「민원처리에 관한 법률」 의거 답변</div>
+        <div class="fc-outcome prec" style="left:900px;top:518px">정보부존재 통지서</div>
+
+        <!-- N3 -->
+        <div class="fc-box spine" style="left:20px;top:650px;width:240px;height:90px">'대체정보'로 제공할 수 있는가?</div>
+
+        <!-- N4 -->
+        <div class="fc-tag" style="left:20px;top:766px;width:260px">제9조 제1항 제1~8호(비공개)</div>
+        <div class="fc-box spine" style="left:20px;top:790px;width:240px;height:100px">비공개 대상에 해당하는가?</div>
+        <div class="fc-outcome ok" style="left:900px;top:832px">공개 통지서</div>
+
+        <!-- N5 -->
+        <div class="fc-tag" style="left:20px;top:916px;width:200px">제14조(부분공개)</div>
+        <div class="fc-box spine" style="left:20px;top:940px;width:240px;height:90px">부분공개 가능한가?</div>
+        <div class="fc-outcome warn" style="left:900px;top:977px">부분공개 통지서</div>
+        <div class="fc-outcome fault" style="left:40px;top:1095px">비공개 통지서</div>
+
+        <!-- connector lines -->
+        <svg class="fc-lines" aria-hidden="true">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+          <path marker-end="url(#arrow)" d="M210,50 L480,50"/>
+          <path marker-end="url(#arrow)" d="M580,80 L580,138 L760,138"/>
+          <path marker-end="url(#arrow)" d="M580,138 L580,260 L140,260 L140,278"/>
+          <path marker-end="url(#arrow)" d="M990,138 L1028,138"/>
+          <path marker-end="url(#arrow)" d="M260,330 L460,330"/>
+          <path marker-end="url(#arrow)" d="M710,332 L898,325"/>
+          <path marker-end="url(#arrow)" d="M585,380 L585,430 L200,430 L200,448"/>
+          <path marker-end="url(#arrow)" d="M140,380 L140,448"/>
+          <path marker-end="url(#arrow)" d="M260,525 L898,522"/>
+          <path marker-end="url(#arrow)" d="M140,600 L140,648"/>
+          <path marker-end="url(#arrow)" d="M140,740 L140,788"/>
+          <path marker-end="url(#arrow)" d="M260,840 L898,838"/>
+          <path marker-end="url(#arrow)" d="M140,890 L140,938"/>
+          <path marker-end="url(#arrow)" d="M260,985 L898,983"/>
+          <path marker-end="url(#arrow)" d="M140,1030 L140,1092"/>
+        </svg>
+
+        <!-- Y/N tags -->
+        <div class="fc-yn" style="left:1002px;top:130px">Y</div>
+        <div class="fc-yn" style="left:340px;top:322px">N</div>
+        <div class="fc-yn" style="left:150px;top:412px">Y</div>
+        <div class="fc-yn" style="left:790px;top:317px">Y</div>
+        <div class="fc-yn" style="left:597px;top:400px">N</div>
+        <div class="fc-yn" style="left:790px;top:514px">Y</div>
+        <div class="fc-yn" style="left:150px;top:622px">N</div>
+        <div class="fc-yn" style="left:790px;top:830px">N</div>
+        <div class="fc-yn" style="left:150px;top:912px">Y</div>
+        <div class="fc-yn" style="left:790px;top:975px">Y</div>
+        <div class="fc-yn" style="left:150px;top:1055px">N</div>
+      </div>
+    </div>
+    <figcaption>
+      그림. 정보공개 청구인의 접수부터 6가지 통지(종결·진정질의·정보부존재·공개·부분공개·비공개) 중
+      하나로 귀결되기까지의 판단 절차. 좌측 세로줄이 본 흐름, 우측 가지가 각 단계에서 갈라지는
+      예외 처리 경로다.
+    </figcaption>
+  </figure>
+
+  <div class="legend">
+    <span><i style="background:var(--neutral)"></i>종결 (반복 청구)</span>
+    <span><i style="background:var(--accent)"></i>진정·질의 (민원처리법 적용)</span>
+    <span><i style="background:var(--prec)"></i>정보부존재</span>
+    <span><i style="background:var(--ok)"></i>공개</span>
+    <span><i style="background:var(--warn)"></i>부분공개</span>
+    <span><i style="background:var(--fault)"></i>비공개</span>
+  </div>
+
+  <h2>근거 조문 요약</h2>
+  <p class="section-sub">흐름도의 각 판단 박스에 표기된 조문을 표로 정리했습니다. 괄호 안 설명은 원본 도표에 병기된 문구를 그대로 옮겼습니다.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>조문</th><th>판단 지점</th><th>원본 병기 설명</th></tr></thead>
+      <tbody>
+        <tr><td>제2조(정의)</td><td>이 법에서 정한 '정보'인가?</td><td>ex) 기록물, 매체, 영상 등</td></tr>
+        <tr><td>제11조의2</td><td>반복 청구 대상인가?</td><td>기존 통지한 사항과 동일한 답변을 할 수밖에 없는 경우</td></tr>
+        <tr><td>제11조 제5항 제2호</td><td>진정·질의인가?</td><td>이 법에 따른 '정보'로 볼 수 없는, 진정·질의에 해당하는 경우</td></tr>
+        <tr><td>제11조 제5항 제1호</td><td>'정보부존재' 인가?</td><td>공공기관이 정보를 생산·접수하지 않았거나, 가공·취합이 필요하거나, 포괄적 청구이거나, 기록물 관리법 등 기타 기한이 만료된 경우</td></tr>
+        <tr><td>제9조 제1항 제1~8호</td><td>비공개 대상에 해당하는가?</td><td>비공개 대상 정보(제1~8호)</td></tr>
+        <tr><td>제14조</td><td>부분공개 가능한가?</td><td>부분공개</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="foot">
+    <code>blueprint.jpeg</code> → <code>blueprint.html</code> 변환 · info_disclosure_request 프로젝트 전용 문서 ·
+    scada_system_agent 프로젝트의 기술 청사진과 동일한 디자인 토큰(색상·폰트)을 재사용해 UX 일관성을 유지했습니다.
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block content %}
+{% if request.query_params.get('saved') %}
+<div class="toast" id="save-toast">설정이 저장되었습니다.</div>
+<script>setTimeout(function(){ var t=document.getElementById('save-toast'); if(t) t.remove(); }, 3000);</script>
+{% endif %}
+<div class="dashboard-grid">
+    <div class="panel">
+        <div class="panel-header"><h2>시스템 설정</h2></div>
+        <form class="settings-form" method="post" action="/settings/general">
+            <label>청구서 자동 수집 경로
+                <input type="text" name="watch_dir" value="{{ settings.get('watch_dir', '') }}" placeholder="예: C:\FOIA\watch" />
+            </label>
+            <label>내장 AI API
+                <input type="text" value="{{ settings.get('internal_ai_api_url', '') }}" readonly />
+            </label>
+            <label>스캔 간격(초)
+                <input type="number" name="scan_interval" min="5" max="3600" value="{{ settings.get('scan_interval', '60') }}" />
+            </label>
+            <label>비공개 사유 키워드 (쉼표 구분, AI 제안용)
+                <textarea name="nondisclosure_keywords">{{ settings.get('nondisclosure_keywords', '') }}</textarea>
+            </label>
+            <button class="btn-primary" type="submit">설정 저장</button>
+        </form>
+    </div>
+    <div class="panel">
+        <div class="panel-header"><h2>내장 AI 연동 테스트</h2></div>
+        <form id="ai-test-form" class="settings-form" onsubmit="return testAI(event)">
+            <label>테스트 청구 내용
+                <textarea name="raw_text">개인정보 관련 열람 청구 자료 요청드립니다.</textarea>
+            </label>
+            <button class="btn-primary" type="submit">AI 테스트 호출</button>
+        </form>
+        <pre id="ai-test-result" class="result-box">아직 테스트하지 않았습니다.</pre>
+    </div>
+</div>
+
+<div class="panel" style="margin-top:18px">
+    <div class="panel-header"><h2>통지서 문구 템플릿</h2></div>
+    <form class="settings-form" method="post" action="/settings/notice-templates">
+        {% for key, label in notice_labels_pairs %}
+        <label>{{ label }}
+            <textarea name="notice_template_{{ key }}">{{ settings.get('notice_template_' ~ key, '') }}</textarea>
+        </label>
+        {% endfor %}
+        <button class="btn-primary" type="submit">템플릿 저장</button>
+    </form>
+</div>
+{% endblock %}

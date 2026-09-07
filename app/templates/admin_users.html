@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block content %}
+{% if request.query_params.get('saved') %}
+<div class="toast" id="save-toast">계정이 추가되었습니다.</div>
+<script>setTimeout(function(){ var t=document.getElementById('save-toast'); if(t) t.remove(); }, 3000);</script>
+{% endif %}
+{% if request.query_params.get('deleted') %}
+<div class="toast" id="del-toast">계정이 삭제되었습니다.</div>
+<script>setTimeout(function(){ var t=document.getElementById('del-toast'); if(t) t.remove(); }, 3000);</script>
+{% endif %}
+{% if request.query_params.get('error') == 'self' %}
+<div class="toast error" id="err-toast">자기 자신의 계정은 삭제할 수 없습니다.</div>
+<script>setTimeout(function(){ var t=document.getElementById('err-toast'); if(t) t.remove(); }, 4000);</script>
+{% elif request.query_params.get('error') == 'lastadmin' %}
+<div class="toast error" id="err-toast">마지막 남은 시스템관리자 계정은 삭제할 수 없습니다.</div>
+<script>setTimeout(function(){ var t=document.getElementById('err-toast'); if(t) t.remove(); }, 4000);</script>
+{% endif %}
+
+<div class="dashboard-grid">
+    <div class="panel">
+        <div class="panel-header"><h2>계정 목록</h2></div>
+        <div class="list-scroll tall">
+            <table class="table table-fixed">
+                <thead><tr><th class="col-name">아이디</th><th class="col-pill">역할</th><th>소속</th><th class="col-time">생성일</th><th class="col-action"></th></tr></thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td class="col-name"><strong>{{ u['username'] }}</strong>{% if u['username'] == request.state.auth_user %} <span class="badge">나</span>{% endif %}</td>
+                        <td class="col-pill"><span class="status-pill info">{{ u['role'] }}</span></td>
+                        <td class="col-target" style="font-size:12px;color:var(--muted)">
+                            {% if u['region'] or u['branch'] or u['department'] %}
+                            {{ u['region'] or '-' }} · {{ u['branch'] or '-' }} · {{ u['department'] or '-' }}
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="col-time" style="font-size:12px;color:var(--muted)">{{ u['created_at'] }}</td>
+                        <td class="col-action">
+                            {% if u['username'] != request.state.auth_user %}
+                            <form method="post" action="/admin/users/{{ u['id'] }}/delete" onsubmit="return confirm('{{ u['username'] }} 계정을 삭제할까요?')">
+                                <button type="submit" class="btn-danger">삭제</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5">계정이 없습니다.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="panel">
+        <div class="panel-header"><h2>계정 추가</h2></div>
+        {% if error %}
+        <div class="auth-error">{{ error }}</div>
+        {% endif %}
+        <form class="settings-form" method="post" action="/admin/users">
+            <label>아이디
+                <input type="text" name="username" required minlength="3" autofocus />
+            </label>
+            <label>비밀번호
+                <input type="text" name="password" required minlength="3" />
+            </label>
+            <label>역할
+                <select name="role">
+                    {% for r in roles %}
+                    <option value="{{ r }}">{{ r }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>1차사업소(지역본부) <span style="color:var(--muted);font-weight:400">— 업무담당자만 해당</span>
+                <input type="text" name="region" placeholder="예: 서울지역본부" />
+            </label>
+            <label>2차사업소(지사)
+                <input type="text" name="branch" placeholder="예: 강남지사" />
+            </label>
+            <label>부서
+                <input type="text" name="department" placeholder="예: 정보공개팀" />
+            </label>
+            <button class="btn-primary" type="submit">계정 생성</button>
+        </form>
+        <div class="notice" style="margin-top:14px">
+            <strong>역할별 화면</strong><br>
+            시스템관리자 → 계정 관리 · 총괄관리자 → 대시보드/청구 전체/설정 ·
+            배정담당자 → 배정 대기 · 업무담당자 → 내 업무(배정받은 건만)
+        </div>
+    </div>
+</div>
+{% endblock %}

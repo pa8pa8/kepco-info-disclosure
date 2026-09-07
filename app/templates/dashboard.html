@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="summary-cards" id="summary-cards"></section>
+
+<section class="toolbar-panel panel">
+    <div class="toolbar-row">
+        <div class="toolbar-group">
+            <a href="/requests/new" class="btn-primary">＋ 새 청구 접수</a>
+            <button class="btn-primary" id="btn-scan" onclick="runScan()">새로고침</button>
+        </div>
+        <div class="toolbar-meta">
+            <span class="badge {{ 'ok' if ai_enabled else 'warn' }}">AI {{ '연동중' if ai_enabled else '미설정' }}</span>
+            <span class="badge" id="unassigned-badge">배정 대기: -</span>
+            <span class="badge" id="last-scan-badge">마지막 갱신: -</span>
+        </div>
+    </div>
+</section>
+
+<section class="dashboard-grid lower-grid mid-grid">
+    <div class="panel event-panel">
+        <div class="panel-header"><h2>판단 대기 중인 청구</h2></div>
+        <div class="notice">AI가 반복 청구 여부까지 자동 판단했고, 나머지 단계는 담당자 확인이 필요합니다.</div>
+        <div class="event-log-list" id="pending-list"></div>
+    </div>
+    <div class="panel">
+        <div class="panel-header"><h2>최근 접수 청구</h2></div>
+        <div class="ai-guide-list" id="recent-list"></div>
+    </div>
+</section>
+{% endblock %}

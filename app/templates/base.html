@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=1" />
+</head>
+<body>
+    <div class="shell">
+        <aside class="sidebar">
+            <div class="brand">정보공개<br><span>청구지원</span></div>
+            <nav id="main-nav">
+                {% if request.state.auth_role == '총괄관리자' %}
+                <a href="/" class="nav-link">대시보드</a>
+                <a href="/requests" class="nav-link">청구 목록</a>
+                <a href="/requests/new" class="nav-link">청구 접수</a>
+                <a href="/settings" class="nav-link">설정</a>
+                {% elif request.state.auth_role == '배정담당자' %}
+                <a href="/dispatch" class="nav-link">배정 대기</a>
+                <a href="/requests/new" class="nav-link">청구 접수</a>
+                {% elif request.state.auth_role == '업무담당자' %}
+                <a href="/requests" class="nav-link">내 업무</a>
+                {% elif request.state.auth_role == '시스템관리자' %}
+                <a href="/admin/users" class="nav-link">계정 관리</a>
+                {% endif %}
+            </nav>
+            <div class="sidebar-footer">© 2026 한국전력공사</div>
+        </aside>
+        <main class="content">
+            <header class="topbar">
+                <div>
+                    <h1>{{ title }}</h1>
+                    <p class="subtitle">
+                        {% if request.state.auth_role == '시스템관리자' %}계정 추가·삭제 관리
+                        {% elif request.state.auth_role == '배정담당자' %}접수된 청구를 업무담당자에게 배정
+                        {% elif request.state.auth_role == '업무담당자' %}나에게 배정된 청구 처리
+                        {% else %}AI 기반 정보공개 청구 판단 지원 대시보드{% endif %}
+                    </p>
+                </div>
+                <div class="topbar-meta">
+                    <span id="now-clock"></span>
+                    {% if request.state.auth_user %}
+                    <form method="post" action="/logout" class="logout-form">
+                        <span class="login-user">{{ request.state.auth_user }}{% if request.state.auth_role %} ({{ request.state.auth_role }}){% endif %}</span>
+                        <button type="submit" class="btn-logout">로그아웃</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </header>
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script src="/static/js/app.js?v=1"></script>
+    <script>
+    (function(){
+      const path = location.pathname;
+      document.querySelectorAll('#main-nav .nav-link').forEach(a => {
+        const href = a.getAttribute('href');
+        if (href === '/' ? path === '/' : path.startsWith(href)) a.classList.add('active');
+      });
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="panel">
+    <div class="panel-header">
+        <h2>{{ '내 업무' if is_my_queue else '청구 목록 / 검색' }}</h2>
+        {% if not is_my_queue %}
+        <a href="/requests/new" class="btn-primary">＋ 새 청구 접수</a>
+        {% endif %}
+    </div>
+    {% if is_my_queue %}
+    <div class="notice">나에게 배정된 청구만 표시됩니다.</div>
+    {% endif %}
+    <form class="filter-form" method="get">
+        <input type="text" name="q" placeholder="청구인 · 요청대상 · 내용 검색" value="{{ filters.q }}" />
+        <select name="status">
+            <option value="">전체 상태</option>
+            {% for value in ['접수', '판단중', '완료'] %}
+            <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ value }}</option>
+            {% endfor %}
+        </select>
+        <select name="notice_type">
+            <option value="">전체 통지 유형</option>
+            {% for key, label in notice_labels.items() %}
+            <option value="{{ key }}" {% if filters.notice_type == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button class="btn-primary" type="submit">검색</button>
+    </form>
+    {% set status_tone = {'접수': 'info', '판단중': 'warning', '완료': 'normal'} %}
+    <div class="list-scroll tall">
+        <table class="table table-fixed">
+            <thead>
+                <tr>
+                    <th class="col-time">접수시각</th><th class="col-name">청구인</th><th>요청대상</th>
+                    {% if not is_my_queue %}<th class="col-name">배정</th>{% endif %}
+                    <th class="col-pill">상태</th><th class="col-pill">통지 유형</th><th class="col-action"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in requests %}
+                <tr>
+                    <td class="col-time">{{ r['received_at'] }}</td>
+                    <td class="col-name">{{ r['requester_name'] }}</td>
+                    <td class="col-target">{{ r['request_target'] or '-' }}</td>
+                    {% if not is_my_queue %}
+                    <td class="col-name">{{ r['assigned_to'] or '-' }}</td>
+                    {% endif %}
+                    <td class="col-pill"><span class="status-pill {{ status_tone.get(r['status'], 'unknown') }}">{{ r['status'] }}</span></td>
+                    <td class="col-pill">
+                        {% if r['final_notice_type'] %}
+                        <span class="status-pill {{ notice_tone.get(r['final_notice_type'], 'unknown') }}">{{ notice_labels.get(r['final_notice_type'], r['final_notice_type']) }}</span>
+                        {% else %}
+                        <span class="status-pill info">판단중</span>
+                        {% endif %}
+                    </td>
+                    <td class="col-action"><a href="/requests/{{ r['id'] }}" class="btn-toggle">상세</a></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7">접수된 청구가 없습니다.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
