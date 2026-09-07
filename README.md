@@ -192,6 +192,8 @@ pyinstaller --onefile --name INFO_DISCLOSURE_System --add-data "app\templates;ap
 - 이 판단 흐름은 원본 도표(`docs/blueprint.jpeg`) 표기를 그대로 코드화한 것이며 법률
   자문이 아닙니다. 실제 운영 적용 전 관계 법령과 원본 문서로 재확인하시기 바랍니다.
 - 계정 4개의 기본 비밀번호는 아이디와 동일한 테스트용 값입니다. 실제 배포 전 변경하세요.
+- 로그인 시도 제한/계정 잠금, CSRF 토큰, 테스트 코드가 아직 없습니다. 2026-09-07 점검
+  결과와 우선순위별 개선 계획은 `docs/PROJECT_REVIEW_2026-09-07.md` 참고.
 
 ## SCADA 프로젝트와의 관계
 디자인 토큰(색상/폰트), 코드 구조, 인증 방식(pbkdf2 + HMAC 세션 쿠키)을 `scada_system_agent`
