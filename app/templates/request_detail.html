@@ -77,6 +77,9 @@
                 <span class="log-sub">결정자: {{ decision['decided_by'] or '-' }}</span>
             </div>
             <div class="ai-guide-action" style="white-space:pre-wrap">{{ decision['notice_text'] }}</div>
+            <div style="margin-top:12px">
+                <a href="/requests/{{ item['id'] }}/notice" target="_blank" class="btn-toggle">📄 통지서 보기 / 인쇄</a>
+            </div>
         </div>
         {% elif can_assign %}
         <div class="panel-header" style="margin-top:18px"><h3>담당자 배정</h3></div>

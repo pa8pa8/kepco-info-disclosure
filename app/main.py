@@ -515,6 +515,40 @@ async def request_detail(request: Request, request_id: int):
     )
 
 
+@app.get('/requests/{request_id}/notice', response_class=HTMLResponse)
+async def request_notice(request: Request, request_id: int):
+    """인쇄/저장용 통지서 화면. 화면에 텍스트로만 남아있던 `notice_text`를 실제로
+    청구인에게 발송할 수 있는 문서 형태로 보여준다 — 브라우저 인쇄(Ctrl+P) → PDF로
+    저장하면 그대로 산출물이 된다. 별도 라이브러리(docx/pdf 생성) 없이 구현해
+    "10년 전 서버에서도 최소 의존성으로 동작"이라는 프로젝트 원칙을 지킨다."""
+    guard = _require_role(request, '총괄관리자', '배정담당자', '업무담당자')
+    if guard:
+        return guard
+    role = request.state.auth_role
+    row = db.get_request(request_id)
+    if not row:
+        return RedirectResponse(_role_home(role), status_code=303)
+    if role == '업무담당자' and row['assigned_to'] != request.state.auth_user:
+        return RedirectResponse('/requests', status_code=303)
+
+    decision = db.get_decision(request_id)
+    if not decision or not decision['final_notice_type']:
+        return RedirectResponse(f'/requests/{request_id}', status_code=303)
+
+    return templates.TemplateResponse(
+        request=request,
+        name='notice_print.html',
+        context={
+            'request': request,
+            'title': APP_TITLE,
+            'item': row,
+            'decision': decision,
+            'notice_labels': foia_core.NOTICE_LABELS,
+            'today': __import__('datetime').date.today().isoformat(),
+        },
+    )
+
+
 @app.get('/settings', response_class=HTMLResponse)
 async def settings_page(request: Request):
     guard = _require_role(request, '총괄관리자')
