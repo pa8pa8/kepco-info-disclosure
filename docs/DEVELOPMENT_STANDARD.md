@@ -132,6 +132,11 @@ git push origin main
 
 이 프로젝트 현재 워크스페이스는 Git 저장소가 초기화되어 있지 않으므로, GitHub 업로드를 자동으로 수행할 수 있는 상태가 아니다.
 
+> 2026-09-07 기준: 위는 이 표준 최초 작성 시점 상황이다. 이후 저장소를 초기화해
+> `github.com/pa8pa8/kepco-info-disclosure`에 push 완료했다 — 기본 브랜치는 `main`이
+> 아니라 `master`이므로 실제로는 `git push origin master`를 사용한다. GitHub 업로드가
+> 코드 수정과 별개의 단계라는 원칙 자체는 여전히 유효하다.
+
 ---
 
 ## 4. 개발 절차 표준

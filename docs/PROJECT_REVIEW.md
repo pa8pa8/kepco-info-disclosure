@@ -15,8 +15,8 @@ README의 "알려진 제약사항"에 없는 리스크와 개선 항목**을 다
 ## 2. 점검 결과
 
 ### 잘 되어 있는 부분
-- 페이지 라우트(`_require_role`)와 API 라우트(`_require_role_api`) 이중 권한 가드가 모든
-  엔드포인트에 일관되게 적용되어 있음
+- 페이지 라우트(`require_role`)와 API 라우트(`require_role_api`, 둘 다 `app/security.py`)
+  이중 권한 가드가 모든 엔드포인트에 일관되게 적용되어 있음
 - 비밀번호는 pbkdf2_sha256 260,000회 해싱, 세션은 HMAC 서명 + `httponly` + `SameSite=Strict`
   쿠키로 구현되어 있어 기본기가 탄탄함
 - 모든 SQL이 파라미터 바인딩(`?`)을 사용 — SQL 인젝션 경로 없음

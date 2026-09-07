@@ -47,7 +47,7 @@ HTTP로도 전송될 수 있습니다.
 ```
 FOIA_AUTH_SECRET=<32바이트 이상의 무작위 문자열>
 ```
-설정하면 DB에 저장된 값 대신 이 값을 우선 사용합니다(`app/main.py`의 `_auth_secret()`).
+설정하면 DB에 저장된 값 대신 이 값을 우선 사용합니다(`app/security.py`의 `auth_secret()`).
 
 ## 4. DB 파일 보호
 
