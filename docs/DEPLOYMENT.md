@@ -1,6 +1,6 @@
 # 배포 가이드 (외부 접근·DB 보호)
 
-이 문서는 `docs/PROJECT_REVIEW_2026-09-07.md`에서 지적한 "외부에서 접근" 항목의 후속
+이 문서는 `docs/PROJECT_REVIEW.md`에서 지적한 "외부에서 접근" 항목의 후속
 조치입니다. 로컬 1인 실행(`실행.bat`/`launcher.py`)이 아니라 **여러 사용자가 접속하는
 서버로 올릴 때** 반드시 확인해야 할 것들을 정리했습니다.
 
@@ -62,12 +62,14 @@ FOIA_AUTH_SECRET=<32바이트 이상의 무작위 문자열>
 ## 5. 입력 크기 제한
 
 청구인 성명(100자)·연락처(200자)·청구 내용(20,000자)에 서버 단 상한을 뒀습니다
-(`/requests/new`는 FastAPI `Form(max_length=...)`로 즉시 거부, 감시 폴더 자동 접수는
-`RequestProcessorService.ingest()`에서 동일 상한으로 잘라 저장). 더 긴 청구가 실제로
+(`RequestProcessorService.ingest()`에서 감시 폴더 자동 접수 시 이 상한으로 잘라 저장 —
+수동 접수 폼은 더 이상 없으므로 이 경로가 유일한 접수 지점입니다). 더 긴 청구가 실제로
 필요하면 `app/services/request_processor.py`의 `MAX_RAW_TEXT_LEN` 등을 조정하세요.
+
+이미 구현됨(참고용): 로그인 시도 제한/계정 잠금(계정당 5회 실패 시 5분) —
+`docs/PROJECT_REVIEW.md` 참고.
 
 ## 6. 아직 안 한 것 (별도 작업 필요)
 
-- 로그인 시도 제한/계정 잠금 (`docs/PROJECT_REVIEW_2026-09-07.md` 우선순위 1)
 - DB 파일 자체의 저장 시 암호화(at-rest encryption) — 현재는 파일 권한 제한만 적용
 - 자동 백업 스케줄링

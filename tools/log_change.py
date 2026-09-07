@@ -14,10 +14,14 @@ import re
 import sys
 
 
-def slugify(value: str) -> str:
+def slugify(value: str, max_len: int = 60) -> str:
     value = value.strip().lower()
-    value = re.sub(r'[^a-z0-9]+', '-', value)
+    # 한글 자모/음절(ㄱ-ㆎ, 가-힣)과 영문 소문자·숫자는 보존하고
+    # 나머지만 구분자로 치환한다. 예전에는 [^a-z0-9]만 허용해서 한글 요약을 쓰면
+    # 파일명이 "krds"처럼 거의 다 날아갔다(예: FOIA-0004-krds.md).
+    value = re.sub(r'[^a-z0-9가-힣ㄱ-ㆎ]+', '-', value)
     value = re.sub(r'-+', '-', value).strip('-')
+    value = value[:max_len].rstrip('-')
     return value or 'change'
 
 

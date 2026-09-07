@@ -20,9 +20,6 @@ STEP_LABELS = {
 }
 
 
-ROLES = ('시스템관리자', '총괄관리자', '배정담당자', '업무담당자')
-
-
 class Database:
     def __init__(self, db_path: Path = DB_PATH):
         self.db_path = str(db_path)

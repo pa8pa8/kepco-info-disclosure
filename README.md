@@ -223,7 +223,7 @@ pyinstaller --onefile --name INFO_DISCLOSURE_System --add-data "app\templates;ap
   기준으로 계산합니다. 실제로는 공휴일 등을 제외한 근무일 기준일 수 있어 참고용입니다.
 - CSRF 토큰, 자동화된 테스트 코드가 아직 없습니다(로그인 시도 제한은 구현됨 — 위 "계정과
   화면" 참고). 2026-09-07 점검 결과와 우선순위별 개선 계획은
-  `docs/PROJECT_REVIEW_2026-09-07.md` 참고.
+  `docs/PROJECT_REVIEW.md` 참고.
 - 배정담당자가 `/requests/{id}` 상세 화면에서 자신이 처리하지 않은 청구의 최종 판단
   결과·통지문·AI 힌트(비공개 사유 키워드 매칭 등)까지 열람할 수 있습니다 — "판단은 불가"
   라는 역할 설계와 어긋나는 부분이며 아직 수정 전입니다.
@@ -231,5 +231,5 @@ pyinstaller --onefile --name INFO_DISCLOSURE_System --add-data "app\templates;ap
 ## SCADA 프로젝트와의 관계
 디자인 토큰(색상/폰트), 코드 구조, 인증 방식(pbkdf2 + HMAC 세션 쿠키)을 `scada_system_agent`
 프로젝트와 동일하게 재사용해 UX 일관성을 유지했습니다. 기능적으로는 서로 무관한 별개
-프로젝트입니다. `docs/scada_aiops_blueprint.html`은 SCADA 프로젝트의 기술 청사진을
+프로젝트입니다. `docs/reference/scada_aiops_blueprint.html`은 SCADA 프로젝트의 기술 청사진을
 UX 참고용으로 복사해 둔 것으로, 이 프로젝트 자체의 문서가 아닙니다.
