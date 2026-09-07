@@ -25,7 +25,10 @@
                 <div class="dispatch-target">{{ r['request_target'] or '요청대상 식별 중' }}</div>
                 <div class="dispatch-label">청구 원문</div>
                 <pre class="result-box raw-text-box">{{ r['raw_text'] }}</pre>
-                <div style="margin-top:12px"><a href="/requests/{{ r['id'] }}" class="link-more">청구 상세 보기 →</a></div>
+                <div style="margin-top:12px">
+                    <a href="/requests/{{ r['id'] }}" class="link-more">청구 상세 보기 →</a>
+                    <a href="/requester-history?name={{ r['requester_name'] | urlencode }}" class="link-more" style="margin-left:14px">이 청구인 이력 보기 →</a>
+                </div>
             </div>
             <div class="dispatch-assign">
                 <div class="assign-panel-title">업무담당자 배정</div>

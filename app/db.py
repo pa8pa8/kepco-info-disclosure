@@ -307,6 +307,25 @@ class Database:
         params.append(limit)
         return self.fetch_all(query, params)
 
+    def find_requests_by_requester_name(self, name: str, exclude_id: int | None = None, limit: int = 50):
+        """청구인 이름이 정확히 일치하는 과거 청구만 조회한다. `list_requests`의 `q`
+        검색과 달리 원문(raw_text)·요청대상까지 훑는 전체 검색이 아니라 "이 청구인의
+        이력"만 보여주기 위한 용도 — 배정담당자에게 전체 데이터 열람 권한을 주지 않으면서
+        반복 청구 여부를 스스로도 확인해볼 수 있게 한다."""
+        query = '''
+            SELECT r.*, d.final_notice_type
+            FROM disclosure_requests r
+            LEFT JOIN request_decisions d ON d.request_id = r.id
+            WHERE r.requester_name = ?
+        '''
+        params: list[Any] = [name]
+        if exclude_id is not None:
+            query += ' AND r.id != ?'
+            params.append(exclude_id)
+        query += ' ORDER BY r.received_at DESC LIMIT ?'
+        params.append(limit)
+        return self.fetch_all(query, params)
+
     def assign_request(self, request_id: int, assigned_to: str, assigned_by: str):
         self.execute(
             '''UPDATE disclosure_requests

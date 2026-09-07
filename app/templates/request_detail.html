@@ -3,7 +3,7 @@
 <div class="panel">
     <div class="panel-header">
         <h2>청구 #{{ item['id'] }} — {{ item['requester_name'] }}</h2>
-        <a href="/requests" class="btn-toggle">목록으로</a>
+        <a href="{{ '/dispatch' if request.state.auth_role == '배정담당자' else '/requests' }}" class="btn-toggle">목록으로</a>
     </div>
     <div class="metric-split">
         <div class="metric-box">
@@ -15,6 +15,11 @@
             <div class="log-sub">
                 배정: {% if item['assigned_to'] %}<strong>{{ item['assigned_to'] }}</strong> ({{ item['assigned_at'] }}){% else %}<span style="color:var(--warn)">배정 대기중</span>{% endif %}
             </div>
+            {% if request.state.auth_role in ('배정담당자', '총괄관리자') %}
+            <div class="log-sub" style="margin-top:6px">
+                <a href="/requester-history?name={{ item['requester_name'] | urlencode }}" class="link-more">이 청구인 이력 보기 →</a>
+            </div>
+            {% endif %}
             {% if deadline_info %}
             <div class="log-sub" style="margin-top:6px">
                 처리기한: <span class="status-pill {{ deadline_info.tone }}">{{ deadline_info.label }}</span>

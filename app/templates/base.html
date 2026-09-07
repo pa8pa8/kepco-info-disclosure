@@ -19,6 +19,7 @@
                 {% elif request.state.auth_role == '배정담당자' %}
                 <a href="/dispatch" class="nav-link">배정 대기</a>
                 <a href="/requests/new" class="nav-link">청구 접수</a>
+                <a href="/requester-history" class="nav-link">청구인 이력 조회</a>
                 {% elif request.state.auth_role == '업무담당자' %}
                 <a href="/requests" class="nav-link">내 업무</a>
                 {% elif request.state.auth_role == '시스템관리자' %}

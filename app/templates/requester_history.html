@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="panel">
+    <div class="panel-header">
+        <h2>청구인 이력 조회</h2>
+    </div>
+    <div class="notice">
+        청구인 이름이 정확히 일치하는 과거 청구만 조회됩니다. 전체 청구 목록 검색은 지원하지
+        않습니다 — 배정 시 반복 청구 여부를 참고하기 위한 용도입니다.
+    </div>
+    <form class="filter-form" method="get" style="grid-template-columns: 2fr auto">
+        <input type="text" name="name" placeholder="청구인 이름 (정확히 입력)" value="{{ query_name }}" autofocus />
+        <button class="btn-primary" type="submit">조회</button>
+    </form>
+
+    {% if query_name %}
+    {% set status_tone = {'접수': 'info', '판단중': 'warning', '완료': 'normal'} %}
+    <div class="list-scroll tall">
+        <table class="table table-fixed">
+            <thead>
+                <tr>
+                    <th class="col-time">접수시각</th><th>요청대상</th>
+                    <th class="col-pill">상태</th><th class="col-pill">통지 유형</th><th class="col-action"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in results %}
+                <tr>
+                    <td class="col-time">{{ r['received_at'] }}</td>
+                    <td class="col-target">{{ r['request_target'] or r['raw_text'] }}</td>
+                    <td class="col-pill"><span class="status-pill {{ status_tone.get(r['status'], 'unknown') }}">{{ r['status'] }}</span></td>
+                    <td class="col-pill">
+                        {% if r['final_notice_type'] %}
+                        <span class="status-pill {{ notice_tone.get(r['final_notice_type'], 'unknown') }}">{{ notice_labels.get(r['final_notice_type'], r['final_notice_type']) }}</span>
+                        {% else %}
+                        <span class="status-pill info">판단중</span>
+                        {% endif %}
+                    </td>
+                    <td class="col-action"><a href="/requests/{{ r['id'] }}" class="btn-toggle">상세</a></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5">"{{ query_name }}" 이름으로 접수된 과거 청구가 없습니다.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
