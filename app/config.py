@@ -35,7 +35,6 @@ DB_PATH = Path(os.getenv('FOIA_DB_PATH', str(DATA_DIR / 'info_disclosure.db')))
 AI_SERVER_HOST = os.getenv('FOIA_AI_SERVER_HOST', '127.0.0.1').strip()
 AI_SERVER_PORT = int(os.getenv('FOIA_AI_SERVER_PORT', '8011'))
 INTERNAL_AI_API_URL = f'http://{AI_SERVER_HOST}:{AI_SERVER_PORT}/identify'
-AI_API_URL = os.getenv('FOIA_AI_API_URL', INTERNAL_AI_API_URL).strip()
 AI_BUNDLE_DIR = Path(os.getenv('FOIA_AI_BUNDLE_DIR', str(RESOURCE_DIR / 'ai_bundle')))
 SCAN_INTERVAL = int(os.getenv('FOIA_SCAN_INTERVAL', '60'))
 APP_TITLE = '한국전력공사 정보공개 청구 지원 시스템'

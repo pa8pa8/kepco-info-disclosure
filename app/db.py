@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable
 
-from .config import AI_API_URL, DB_PATH, WATCH_DIR
+from .config import DB_PATH, INTERNAL_AI_API_URL, SCAN_INTERVAL, WATCH_DIR
 
 STEP_LABELS = {
     'repeat': '반복 청구 대상인가?',
@@ -163,8 +163,10 @@ class Database:
     def _seed_settings(self):
         defaults = {
             'watch_dir': str(WATCH_DIR),
-            'ai_api_url': AI_API_URL,
-            'scan_interval': '60',
+            # main.py의 lifespan/설정 저장 로직이 매번 INTERNAL_AI_API_URL로 덮어써서
+            # 외부 AI 엔드포인트로 바뀌지 않도록 강제한다 — 여기 시드값도 그와 일치시킨다.
+            'ai_api_url': INTERNAL_AI_API_URL,
+            'scan_interval': str(SCAN_INTERVAL),
             'notice_template_공개': '청구하신 정보를 「공공기관의 정보공개에 관한 법률」에 따라 공개합니다.',
             'notice_template_부분공개': '청구하신 정보 중 일부는 비공개 대상에 해당하여, 나머지 부분만 부분공개합니다. (제14조)',
             'notice_template_비공개': '청구하신 정보는 「공공기관의 정보공개에 관한 법률」 제9조 제1항 각 호의 비공개 대상 정보에 해당하여 비공개합니다.',
@@ -277,9 +279,6 @@ class Database:
     def get_request(self, request_id: int):
         return self.fetch_one('SELECT * FROM disclosure_requests WHERE id = ?', (request_id,))
 
-    def get_source_file(self, source_file: str):
-        return self.fetch_one('SELECT id FROM disclosure_requests WHERE source_file = ?', (source_file,))
-
     def list_requests(self, status: str = '', notice_type: str = '', q: str = '', limit: int = 200,
                        assigned_to: str | None = None, unassigned_only: bool = False):
         query = '''
@@ -390,10 +389,6 @@ class Database:
                VALUES (?, 'reject', '담당자 재배정 요청', ?, NULL, ?)''',
             (request_id, ', '.join(candidates), actor),
         )
-
-    def count_unassigned_pending(self) -> int:
-        row = self.fetch_one("SELECT COUNT(*) AS cnt FROM disclosure_requests WHERE status = '판단중' AND assigned_to IS NULL")
-        return row['cnt'] if row else 0
 
     def list_recently_assigned(self, limit: int = 10):
         return self.fetch_all(

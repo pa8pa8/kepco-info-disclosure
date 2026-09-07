@@ -242,6 +242,16 @@ def _require_role_api(request: Request, *roles: str):
     return None
 
 
+async def _read_json_body(request: Request) -> dict | None:
+    """POST 바디를 JSON으로 파싱한다. 잘못된 형식(비어있음, 깨진 인코딩 등)이면 예외를
+    올리지 않고 None을 반환 — 호출부에서 500 대신 깔끔한 400으로 응답하게 한다."""
+    try:
+        data = await request.json()
+    except Exception:
+        return None
+    return data if isinstance(data, dict) else None
+
+
 @app.middleware('http')
 async def require_authentication(request: Request, call_next):
     path = request.url.path
@@ -859,7 +869,9 @@ async def api_assign(request_id: int, request: Request):
     guard = _require_role_api(request, '배정담당자', '총괄관리자')
     if guard:
         return guard
-    data = await request.json()
+    data = await _read_json_body(request)
+    if data is None:
+        return JSONResponse({'success': False, 'message': '잘못된 요청 형식입니다.'}, status_code=400)
     assigned_to = (data.get('assigned_to') or '').strip()
     target_user = db.get_user(assigned_to)
     if not target_user or target_user['role'] != '업무담당자':
@@ -899,7 +911,9 @@ async def api_reject(request_id: int, request: Request):
     if decision and decision['final_notice_type']:
         return JSONResponse({'success': False, 'message': '이미 처리가 완료된 청구는 재배정할 수 없습니다.'}, status_code=409)
 
-    data = await request.json()
+    data = await _read_json_body(request)
+    if data is None:
+        return JSONResponse({'success': False, 'message': '잘못된 요청 형식입니다.'}, status_code=400)
     raw_candidates = data.get('candidates')
     if not isinstance(raw_candidates, list):
         return JSONResponse({'success': False, 'message': '재배정할 담당자를 선택해주세요.'}, status_code=400)
@@ -937,7 +951,7 @@ async def api_extend_deadline(request_id: int, request: Request):
     if row['deadline_extended']:
         return JSONResponse({'success': False, 'message': '이미 한 차례 연장된 청구입니다.'}, status_code=409)
 
-    data = await request.json()
+    data = await _read_json_body(request) or {}
     reason = (data.get('reason') or '').strip()[:200]
     db.extend_deadline(request_id, actor=request.state.auth_user, reason=reason)
     return JSONResponse({'success': True})
@@ -997,7 +1011,9 @@ async def api_decide(request_id: int, request: Request):
     if request.state.auth_role == '업무담당자' and row['assigned_to'] != request.state.auth_user:
         return JSONResponse({'success': False, 'message': '본인에게 배정된 청구만 처리할 수 있습니다.'}, status_code=403)
 
-    data = await request.json()
+    data = await _read_json_body(request)
+    if data is None:
+        return JSONResponse({'success': False, 'message': '잘못된 요청 형식입니다.'}, status_code=400)
     step_key = data.get('step')
     answer = bool(data.get('answer'))
     actor = request.state.auth_user or '담당자'
