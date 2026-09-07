@@ -1,9 +1,12 @@
 """배정 추천 엔진(GradientBoost 실제 동작, LLM 인터페이스만) 및 그걸 감싼 API."""
 from __future__ import annotations
 
+import time
+
 from app.services.recommend import ENGINES
 from app.services.recommend.gbm_recommender import GBMRecommender
 from app.services.recommend.llm_recommender import LLMRecommender
+from app.services.recommend.synthetic_data import STAFF_BY_DEPARTMENT, generate_training_examples
 
 
 def test_gbm_recommender_returns_available_result_for_known_department_text():
@@ -38,6 +41,53 @@ def test_llm_recommender_reports_not_configured_without_api_key(monkeypatch):
 
 def test_engines_registry_has_both_backends():
     assert set(ENGINES.keys()) == {'gbm', 'llm'}
+
+
+def test_gbm_recommender_reloads_model_when_file_changes_no_restart_needed(tmp_path, monkeypatch):
+    """FOIA-0031 회귀 테스트: 재학습해도 서버 재시작 없이 새 모델이 반영돼야 한다."""
+    import joblib
+    from sklearn.ensemble import GradientBoostingClassifier
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.pipeline import Pipeline
+
+    import app.services.recommend.gbm_recommender as gbm_module
+
+    model_path = tmp_path / 'model.joblib'
+    monkeypatch.setattr(gbm_module, 'GBM_MODEL_PATH', model_path)
+
+    def _train_and_save(labels):
+        texts = [f'샘플 문장 {i}' for i in range(len(labels))]
+        pipeline = Pipeline([
+            ('tfidf', TfidfVectorizer(analyzer='char_wb', ngram_range=(2, 3), min_df=1)),
+            ('gbm', GradientBoostingClassifier(random_state=42, n_estimators=5)),
+        ])
+        pipeline.fit(texts, labels)
+        joblib.dump(pipeline, model_path)
+
+    engine = GBMRecommender()
+    assert engine.recommend({'request_target': 'x', 'raw_text': 'x'})['available'] is False  # 모델 없음
+
+    _train_and_save(['staff1', 'staff2'])
+    first_classes = set(engine._load_model().classes_)
+    assert first_classes == {'staff1', 'staff2'}
+
+    time.sleep(1.1)  # 파일시스템 mtime 해상도(1초)보다 확실히 크게
+    _train_and_save(['staff1', 'staff2', 'staff3'])
+    second_classes = set(engine._load_model().classes_)
+    assert second_classes == {'staff1', 'staff2', 'staff3'}, '재학습 후 mtime이 바뀌었는데 이전 모델이 캐시된 채 남아있음'
+
+
+def test_synthetic_training_examples_cover_every_staff_account():
+    examples = generate_training_examples(per_department=20)
+    labels = {staff for _, staff in examples}
+    all_staff = {staff for staffs in STAFF_BY_DEPARTMENT.values() for staff, _ in staffs}
+    assert labels == all_staff
+
+
+def test_synthetic_training_examples_deterministic_with_same_seed():
+    a = generate_training_examples(per_department=10, seed=1)
+    b = generate_training_examples(per_department=10, seed=1)
+    assert a == b
 
 
 def test_generate_recommendation_endpoint_returns_both_engines(as_dispatcher, make_request):

@@ -31,6 +31,15 @@ REAL_DATA_PATH = Path(__file__).resolve().parent.parent / 'data' / 'training' / 
 MIN_ROWS_FOR_VALIDATION_SPLIT = 10
 
 
+def build_pipeline(sample_count: int) -> Pipeline:
+    """검증용과 최종 배포용 파이프라인이 서로 다른 `min_df`를 쓰다 어긋나는 걸 막기
+    위해 한 곳으로 모았다 — 데이터가 적으면(<50건) 어휘가 너무 걸러지지 않도록 완화."""
+    return Pipeline([
+        ('tfidf', TfidfVectorizer(analyzer='char_wb', ngram_range=(2, 3), min_df=1 if sample_count < 50 else 2)),
+        ('gbm', GradientBoostingClassifier(random_state=42)),
+    ])
+
+
 def load_real_examples() -> list[tuple[str, str]]:
     """`data/training/staff_assignments.csv`를 읽는다. `text`/`staff` 두 컬럼이 필요하고,
     `staff`는 실제로 존재하는 업무담당자 계정이어야 한다(그 외 행은 건너뛰고 경고)."""
@@ -79,10 +88,7 @@ def main() -> None:
         x_train, x_test, y_train, y_test = train_test_split(
             texts, labels, test_size=0.2, random_state=42, stratify=labels,
         )
-        pipeline = Pipeline([
-            ('tfidf', TfidfVectorizer(analyzer='char_wb', ngram_range=(2, 3), min_df=2)),
-            ('gbm', GradientBoostingClassifier(random_state=42)),
-        ])
+        pipeline = build_pipeline(len(x_train))
         pipeline.fit(x_train, y_train)
         train_acc = pipeline.score(x_train, y_train)
         test_acc = pipeline.score(x_test, y_test)
@@ -96,10 +102,7 @@ def main() -> None:
         print('데이터가 적어(또는 담당자당 1건뿐이라) 검증 없이 전체 데이터로만 학습합니다.')
 
     # 배포용 모델은 (검증했더라도) 전체 데이터로 다시 학습해 최대한 활용한다.
-    pipeline = Pipeline([
-        ('tfidf', TfidfVectorizer(analyzer='char_wb', ngram_range=(2, 3), min_df=1 if len(examples) < 50 else 2)),
-        ('gbm', GradientBoostingClassifier(random_state=42)),
-    ])
+    pipeline = build_pipeline(len(examples))
     pipeline.fit(texts, labels)
 
     GBM_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)

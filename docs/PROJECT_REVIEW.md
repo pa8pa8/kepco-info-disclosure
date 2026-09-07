@@ -104,6 +104,23 @@ README의 "알려진 제약사항"에 없는 리스크와 개선 항목**을 다
     청구인 개인정보의 외부 전송 여부가 아직 미정이라 항상 "준비 중"을 반환,
     `app/services/recommend/llm_recommender.py`의 TODO가 실제 연동 지점).
     요청대상 추출·반복청구 판정 같은 나머지 AI 기능은 이번 범위 밖 — 여전히 데모.
+    `data/training/staff_assignments.csv`(개인정보라 `.gitignore` 처리됨)를 채우면
+    실제 이력으로 재학습 가능(FOIA-0030, `data/training/README.md` 참고).
+
+### AI 코드 점검에서 발견, 보류 (사용자 지시, 2026-09-08)
+13. `app/ai_runtime/api.py`가 `/identify` 호출마다 청구인 원문 전체를
+    `data/ai_log.jsonl`에 무기한 누적한다. `.gitignore`로 GitHub 유출은 막혀 있지만,
+    로컬 디스크에 개인정보가 로테이션 없이 계속 쌓이는 구조 — 보존 기간 정책이나
+    주기적 삭제/로테이션 검토 필요.
+14. `find_repeat_candidate`(`app/ai_runtime/utils_text.py`)가 신규 접수마다 최근
+    500건(`db.recent_raw_texts`)과 `difflib.SequenceMatcher`로 전수 비교한다. 지금
+    규모에서는 문제없지만 물량이 늘면 접수 지연 요인이 될 수 있다 — 9번(임베딩 기반
+    전환) 검토 시 같이 해결될 가능성 높음.
+15. `app/static/js/app.js`의 `renderEngineComparison`/`renderRecommendations`가 담당자
+    이름을 `onclick` 문자열에 직접 끼워 넣는다(예: `onclick="assignRequestTo(${id},
+    '${name}')"`). 지금은 이름이 항상 `staffN` 패턴이라 위험은 없지만, FOIA-0022에서
+    담당자 검색 결과만 더 안전한 `data-*` 속성 + `escapeHtml` 방식으로 바꿔놓은 것과
+    일관성이 안 맞음 — 통일 검토.
 
 ## 5. 참고
 - 개발 서버가 이전 세션부터 `http://127.0.0.1:8000`에서 계속 실행 중입니다. 이 점검·문서화

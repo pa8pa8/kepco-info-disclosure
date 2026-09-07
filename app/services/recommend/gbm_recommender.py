@@ -14,31 +14,36 @@ from .base import RecommendResult, unavailable
 
 logger = logging.getLogger(__name__)
 
-_model = None
-_load_attempted = False
-
-
-def _load_model():
-    global _model, _load_attempted
-    if _load_attempted:
-        return _model
-    _load_attempted = True
-    if not GBM_MODEL_PATH.exists():
-        return None
-    try:
-        import joblib
-        _model = joblib.load(GBM_MODEL_PATH)
-    except Exception as exc:  # 모델 파일 손상 등 — 추천 기능만 비활성화하고 앱은 계속 동작
-        logger.warning('[gbm-recommender] failed to load model at %s: %s', GBM_MODEL_PATH, exc)
-        _model = None
-    return _model
-
 
 class GBMRecommender:
     source = 'gbm'
 
+    def __init__(self):
+        self._model = None
+        self._model_mtime: float | None = None
+
+    def _load_model(self):
+        """모델을 인스턴스에 캐시하되, 파일 수정시각이 바뀌면 다시 불러온다 —
+        `tools/train_gbm_recommender.py`로 재학습해도 서버를 재시작할 필요가 없게."""
+        if not GBM_MODEL_PATH.exists():
+            self._model = None
+            self._model_mtime = None
+            return None
+        mtime = GBM_MODEL_PATH.stat().st_mtime
+        if self._model is not None and mtime == self._model_mtime:
+            return self._model
+        try:
+            import joblib
+            self._model = joblib.load(GBM_MODEL_PATH)
+            self._model_mtime = mtime
+        except Exception as exc:  # 모델 파일 손상 등 — 추천 기능만 비활성화하고 앱은 계속 동작
+            logger.warning('[gbm-recommender] failed to load model at %s: %s', GBM_MODEL_PATH, exc)
+            self._model = None
+            self._model_mtime = None
+        return self._model
+
     def recommend(self, row) -> RecommendResult:
-        pipeline = _load_model()
+        pipeline = self._load_model()
         if pipeline is None:
             return unavailable(
                 self.source,
