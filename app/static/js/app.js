@@ -427,10 +427,45 @@ function connectSSE() {
   }, 30000);
 }
 
+// ── 업무담당자 "내 업무" 새 배정 감지 (폴링) ────────────────────────
+// 이 앱은 처음부터 웹소켓/SSE 없이 폴링만 쓰고 있어(위 connectSSE도 실은 setInterval),
+// 같은 방식으로 업무담당자가 새로 배정받으면 토스트로 알려준다.
+let _myQueuePollTimer = null;
+let _myQueueKnownIds = null;
+
+async function pollMyQueue() {
+  try {
+    const res = await fetch('/api/requests?limit=200');
+    if (!res.ok) return;
+    const rows = await res.json();
+    const ids = new Set(rows.map(r => r.id));
+    if (_myQueueKnownIds === null) {
+      _myQueueKnownIds = ids;  // 최초 로드는 기준선만 세우고 알리지 않음
+      return;
+    }
+    const newIds = [...ids].filter(id => !_myQueueKnownIds.has(id));
+    _myQueueKnownIds = ids;
+    if (newIds.length) {
+      showToast(`새로 배정된 청구가 ${newIds.length}건 있습니다. 목록을 새로고침합니다.`);
+      setTimeout(() => location.reload(), 1200);
+    }
+  } catch (e) {
+    // 폴링 실패는 조용히 무시 — 다음 주기에 다시 시도
+  }
+}
+
+function initMyQueuePolling() {
+  if (!window.MY_QUEUE_POLL) return;
+  pollMyQueue();
+  if (_myQueuePollTimer) clearInterval(_myQueuePollTimer);
+  _myQueuePollTimer = setInterval(pollMyQueue, 20000);
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   updateClock();
   setInterval(updateClock, 1000);
   loadDashboard();
   connectSSE();
   initAllStaffSearches();
+  initMyQueuePolling();
 });

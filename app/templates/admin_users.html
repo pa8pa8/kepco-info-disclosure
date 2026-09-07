@@ -21,7 +21,7 @@
         <div class="panel-header"><h2>계정 목록</h2></div>
         <div class="list-scroll tall">
             <table class="table table-fixed">
-                <thead><tr><th class="col-name">아이디</th><th class="col-pill">역할</th><th>소속</th><th class="col-time">생성일</th><th class="col-action"></th></tr></thead>
+                <thead><tr><th class="col-name">아이디</th><th class="col-pill">역할</th><th>소속</th><th class="col-time">생성일</th><th class="col-action-wide"></th></tr></thead>
                 <tbody>
                     {% for u in users %}
                     <tr>
@@ -33,7 +33,8 @@
                             {% else %}-{% endif %}
                         </td>
                         <td class="col-time" style="font-size:12px;color:var(--muted)">{{ u['created_at'] }}</td>
-                        <td class="col-action">
+                        <td class="col-action-wide">
+                            <a href="/admin/users/{{ u['id'] }}/edit" class="btn-toggle">수정</a>
                             {% if u['username'] != request.state.auth_user %}
                             <form method="post" action="/admin/users/{{ u['id'] }}/delete" onsubmit="return confirm('{{ u['username'] }} 계정을 삭제할까요?')">
                                 <button type="submit" class="btn-danger">삭제</button>
@@ -57,8 +58,8 @@
             <label>아이디
                 <input type="text" name="username" required minlength="3" autofocus />
             </label>
-            <label>비밀번호
-                <input type="password" name="password" required minlength="3" autocomplete="new-password" />
+            <label>비밀번호 <span style="color:var(--muted);font-weight:400">— 8자 이상</span>
+                <input type="password" name="password" required minlength="8" autocomplete="new-password" />
             </label>
             <label>역할
                 <select name="role">

@@ -1,5 +1,8 @@
 {% extends 'base.html' %}
 {% block content %}
+{% if is_my_queue %}
+<script>window.MY_QUEUE_POLL = true;</script>
+{% endif %}
 <div class="panel">
     <div class="panel-header">
         <h2>{{ '내 업무' if is_my_queue else '청구 목록 / 검색' }}</h2>

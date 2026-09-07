@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="panel" style="max-width:520px">
+    <div class="panel-header">
+        <h2>계정 수정 — {{ target['username'] }}</h2>
+        <a href="/admin/users" class="btn-toggle">목록으로</a>
+    </div>
+    {% if error %}
+    <div class="auth-error">{{ error }}</div>
+    {% endif %}
+    <form class="settings-form" method="post" action="/admin/users/{{ target['id'] }}/edit">
+        <label>아이디 <span style="color:var(--muted);font-weight:400">— 변경 불가(배정·이력 참조 때문)</span>
+            <input type="text" value="{{ target['username'] }}" disabled />
+        </label>
+        <label>역할
+            <select name="role">
+                {% for r in roles %}
+                <option value="{{ r }}" {% if target['role'] == r %}selected{% endif %}>{{ r }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>1차사업소(지역본부) <span style="color:var(--muted);font-weight:400">— 업무담당자만 해당</span>
+            <input type="text" name="region" value="{{ target['region'] or '' }}" placeholder="예: 서울지역본부" />
+        </label>
+        <label>2차사업소(지사)
+            <input type="text" name="branch" value="{{ target['branch'] or '' }}" placeholder="예: 강남지사" />
+        </label>
+        <label>부서
+            <input type="text" name="department" value="{{ target['department'] or '' }}" placeholder="예: 정보공개팀" />
+        </label>
+        <label>새 비밀번호 <span style="color:var(--muted);font-weight:400">— 변경하지 않으려면 비워두세요, 입력 시 8자 이상</span>
+            <input type="password" name="password" minlength="8" autocomplete="new-password" placeholder="변경 시에만 입력" />
+        </label>
+        <button class="btn-primary" type="submit">저장</button>
+    </form>
+</div>
+{% endblock %}

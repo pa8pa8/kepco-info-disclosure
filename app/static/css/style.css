@@ -74,6 +74,8 @@ body {
 .table.table-fixed .col-name { width: 128px; }
 .table.table-fixed .col-pill { width: 118px; }
 .table.table-fixed .col-action { width: 78px; overflow: visible; }
+.table.table-fixed .col-action-wide { width: 150px; overflow: visible; white-space: nowrap; }
+.table.table-fixed .col-action-wide form { display: inline-block; margin-left: 6px; }
 .list-scroll { max-height: 340px; overflow: auto; }
 .list-scroll.tall { max-height: 660px; }
 .metric-split { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }

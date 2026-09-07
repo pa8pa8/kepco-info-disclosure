@@ -223,6 +223,22 @@ class Database:
     def get_user_by_id(self, user_id: int):
         return self.fetch_one('SELECT * FROM users WHERE id = ?', (user_id,))
 
+    def update_user(self, user_id: int, role: str, region: str = '', branch: str = '',
+                     department: str = '', password_hash: str | None = None):
+        """계정 수정 — 아이디는 바꾸지 않는다(배정/처리이력 전반에서 아이디를 문자열로
+        참조하고 있어, 바꾸면 그 참조들이 깨진다). 비밀번호는 `password_hash`가 주어졌을
+        때만 갱신하고, 없으면 기존 값을 그대로 둔다."""
+        if password_hash:
+            self.execute(
+                'UPDATE users SET role=?, region=?, branch=?, department=?, password_hash=? WHERE id=?',
+                (role, region or None, branch or None, department or None, password_hash, user_id),
+            )
+        else:
+            self.execute(
+                'UPDATE users SET role=?, region=?, branch=?, department=? WHERE id=?',
+                (role, region or None, branch or None, department or None, user_id),
+            )
+
     def list_users(self):
         return self.fetch_all('SELECT id, username, role, region, branch, department, created_at FROM users ORDER BY id')
 

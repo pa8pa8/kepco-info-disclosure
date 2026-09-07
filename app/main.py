@@ -636,8 +636,8 @@ async def admin_users_create(
     error = ''
     if len(username) < 3:
         error = '아이디는 3자 이상으로 입력해주세요.'
-    elif len(password) < 3:
-        error = '비밀번호는 3자 이상으로 입력해주세요.'
+    elif len(password) < 8:
+        error = '비밀번호는 8자 이상으로 입력해주세요.'
     elif role not in ROLES:
         error = '올바른 역할을 선택해주세요.'
     elif db.get_user(username) is not None:
@@ -667,6 +667,58 @@ async def admin_users_delete(request: Request, user_id: int):
         return RedirectResponse('/admin/users?error=lastadmin', status_code=303)
     db.delete_user(user_id)
     return RedirectResponse('/admin/users?deleted=1', status_code=303)
+
+
+@app.get('/admin/users/{user_id}/edit', response_class=HTMLResponse)
+async def admin_users_edit_page(request: Request, user_id: int):
+    guard = _require_role(request, '시스템관리자')
+    if guard:
+        return guard
+    target = db.get_user_by_id(user_id)
+    if not target:
+        return RedirectResponse('/admin/users', status_code=303)
+    return templates.TemplateResponse(
+        request=request,
+        name='admin_user_edit.html',
+        context={'request': request, 'title': APP_TITLE, 'target': target, 'roles': ROLES, 'error': ''},
+    )
+
+
+@app.post('/admin/users/{user_id}/edit')
+async def admin_users_edit_submit(
+    request: Request,
+    user_id: int,
+    role: str = Form(...),
+    region: str = Form(''),
+    branch: str = Form(''),
+    department: str = Form(''),
+    password: str = Form(''),
+):
+    guard = _require_role(request, '시스템관리자')
+    if guard:
+        return guard
+    target = db.get_user_by_id(user_id)
+    if not target:
+        return RedirectResponse('/admin/users', status_code=303)
+
+    error = ''
+    if role not in ROLES:
+        error = '올바른 역할을 선택해주세요.'
+    elif password and len(password) < 8:
+        error = '비밀번호는 8자 이상으로 입력해주세요(변경하지 않으려면 비워두세요).'
+    elif target['role'] == '시스템관리자' and role != '시스템관리자' and db.count_users_by_role('시스템관리자') <= 1:
+        error = '마지막 남은 시스템관리자 계정의 역할은 변경할 수 없습니다.'
+    if error:
+        return templates.TemplateResponse(
+            request=request,
+            name='admin_user_edit.html',
+            context={'request': request, 'title': APP_TITLE, 'target': target, 'roles': ROLES, 'error': error},
+            status_code=400,
+        )
+
+    password_hash = _hash_password(password) if password else None
+    db.update_user(user_id, role, region.strip(), branch.strip(), department.strip(), password_hash)
+    return RedirectResponse('/admin/users?saved=1', status_code=303)
 
 
 # ── Dispatch (배정담당자) ───────────────────────────────────────────
@@ -920,10 +972,13 @@ async def api_summary(request: Request):
 
 @app.get('/api/requests')
 async def api_requests(request: Request, limit: int = Query(default=50, ge=1, le=500)):
-    guard = _require_role_api(request, '총괄관리자')
+    # 총괄관리자는 대시보드용으로 전체를 보고, 업무담당자는 "내 업무" 새 배정 감지 폴링용으로
+    # 본인 배정건만 본다(request_list 페이지 라우트와 동일한 필터링 원칙).
+    guard = _require_role_api(request, '총괄관리자', '업무담당자')
     if guard:
         return guard
-    rows = [_with_deadline(dict(r)) for r in db.list_requests(limit=limit)]
+    assigned_to = request.state.auth_user if request.state.auth_role == '업무담당자' else None
+    rows = [_with_deadline(dict(r)) for r in db.list_requests(limit=limit, assigned_to=assigned_to)]
     return JSONResponse(rows)
 
 
