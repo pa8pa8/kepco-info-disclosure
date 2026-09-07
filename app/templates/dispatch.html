@@ -4,7 +4,6 @@
 <div class="panel">
     <div class="panel-header">
         <h2>배정 대기 청구 <span class="badge">{{ unassigned|length }}건</span></h2>
-        <a href="/requests/new" class="btn-primary">＋ 새 청구 접수</a>
     </div>
     {% if not staff_directory %}
     <div class="auth-error">등록된 업무담당자 계정이 없습니다. 시스템관리자에게 계정 생성을 요청하세요.</div>

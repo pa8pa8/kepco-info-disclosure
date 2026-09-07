@@ -13,10 +13,8 @@ from .ai_client import AIClient
 
 FILE_PATTERN = re.compile(r'^\d{6,8}_.+\.txt$')
 
-# 청구인 성명·연락처·원문 길이 상한. HTTP 접수(/requests/new)는 FastAPI Form()의
-# max_length로 먼저 거부되지만, 감시 폴더(data/watch) 자동 접수는 검증을 거치지 않고
-# 바로 이 함수로 들어오므로 여기서도 동일한 상한으로 잘라 DB에 과도하게 큰 값이
-# 쌓이는 것을 막는다.
+# 청구인 성명·연락처·원문 길이 상한. 감시 폴더(data/watch) 자동 접수는 별도 검증을
+# 거치지 않고 바로 이 함수로 들어오므로, DB에 과도하게 큰 값이 쌓이지 않도록 여기서 자른다.
 MAX_NAME_LEN = 100
 MAX_CONTACT_LEN = 200
 MAX_RAW_TEXT_LEN = 20000
@@ -28,8 +26,6 @@ class RequestProcessorService:
         self.default_watch_dir = watch_dir
         self.ai_client = ai_client or AIClient()
         self._task: asyncio.Task | None = None
-        self._scan_event = asyncio.Event()
-        self._last_result: dict[str, Any] = {}
 
     async def start(self, interval: int):
         if self._task and not self._task.done():
@@ -48,11 +44,7 @@ class RequestProcessorService:
     async def _loop(self, interval: int):
         while True:
             try:
-                result = await self.scan_once()
-                if result.get('new_requests', 0) > 0:
-                    self._last_result = result
-                    self._scan_event.set()
-                    self._scan_event.clear()
+                await self.scan_once()
             except Exception as exc:  # pragma: no cover
                 print(f'[request-processor] error: {exc}')
             await asyncio.sleep(interval)

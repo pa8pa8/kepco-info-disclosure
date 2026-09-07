@@ -14,7 +14,7 @@ import time
 from urllib.parse import quote
 
 from fastapi import FastAPI, Form, Query, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -415,38 +415,6 @@ async def request_list(
             'is_my_queue': role == '업무담당자',
         },
     )
-
-
-@app.get('/requests/new', response_class=HTMLResponse)
-async def request_new_page(request: Request):
-    guard = _require_role(request, '배정담당자', '총괄관리자')
-    if guard:
-        return guard
-    return templates.TemplateResponse(
-        request=request,
-        name='request_new.html',
-        context={'request': request, 'title': APP_TITLE},
-    )
-
-
-@app.post('/requests/new')
-async def request_new_submit(
-    request: Request,
-    requester_name: str = Form(..., max_length=100),
-    requester_contact: str = Form('', max_length=200),
-    channel: str = Form('텍스트'),
-    raw_text: str = Form(..., max_length=20000),
-):
-    guard = _require_role(request, '배정담당자', '총괄관리자')
-    if guard:
-        return guard
-    request_id = await processor.ingest(
-        requester_name=requester_name.strip(),
-        requester_contact=requester_contact.strip(),
-        channel=channel,
-        raw_text=raw_text.strip(),
-    )
-    return RedirectResponse(f'/requests/{request_id}', status_code=303)
 
 
 @app.get('/requests/{request_id}', response_class=HTMLResponse)
@@ -1015,27 +983,6 @@ async def api_watch_scan(request: Request):
     result = await processor.scan_once()
     result['scanned_at'] = __import__('datetime').datetime.now().isoformat(timespec='seconds')
     return JSONResponse(result)
-
-
-@app.get('/api/stream')
-async def api_stream(request: Request):
-    guard = _require_role_api(request, '총괄관리자')
-    if guard:
-        return guard
-
-    async def event_generator():
-        while True:
-            try:
-                await asyncio.wait_for(processor._scan_event.wait(), timeout=30)
-                yield f"data: {json.dumps(processor._last_result)}\n\n"
-            except asyncio.TimeoutError:
-                yield ': heartbeat\n\n'
-
-    return StreamingResponse(
-        event_generator(),
-        media_type='text/event-stream',
-        headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'},
-    )
 
 
 @app.post('/api/requests/{request_id}/decide')

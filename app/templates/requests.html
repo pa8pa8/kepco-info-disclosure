@@ -6,9 +6,6 @@
 <div class="panel">
     <div class="panel-header">
         <h2>{{ '내 업무' if is_my_queue else '청구 목록 / 검색' }}</h2>
-        {% if not is_my_queue %}
-        <a href="/requests/new" class="btn-primary">＋ 새 청구 접수</a>
-        {% endif %}
     </div>
     {% if is_my_queue %}
     <div class="notice">나에게 배정된 청구만 표시됩니다.</div>
