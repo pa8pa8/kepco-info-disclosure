@@ -5,10 +5,10 @@
         <div class="panel-header"><h2>정보공개 청구 접수</h2></div>
         <form class="settings-form" method="post" action="/requests/new">
             <label>청구인 성명
-                <input type="text" name="requester_name" required placeholder="예: 홍길동" />
+                <input type="text" name="requester_name" required maxlength="100" placeholder="예: 홍길동" />
             </label>
             <label>연락처(선택)
-                <input type="text" name="requester_contact" placeholder="예: 010-0000-0000 / email" />
+                <input type="text" name="requester_contact" maxlength="200" placeholder="예: 010-0000-0000 / email" />
             </label>
             <label>제출 형식
                 <select name="channel">
@@ -20,7 +20,7 @@
                 </select>
             </label>
             <label>청구 내용
-                <textarea name="raw_text" required placeholder="청구인이 제출한 정보공개 청구 내용을 그대로 입력(또는 붙여넣기)하세요."></textarea>
+                <textarea name="raw_text" required maxlength="20000" placeholder="청구인이 제출한 정보공개 청구 내용을 그대로 입력(또는 붙여넣기)하세요. (최대 20,000자)"></textarea>
             </label>
             <button class="btn-primary" type="submit">접수 및 AI 식별 실행</button>
         </form>

@@ -145,6 +145,9 @@ uvicorn app.main:app --reload
 - `FOIA_DB_PATH`: SQLite 파일 경로 (기본 `data/info_disclosure.db`)
 - `FOIA_NO_BROWSER`: `1`이면 실행 시 브라우저 자동 오픈 비활성화
 - `FOIA_AUTH_COOKIE_SECURE`: `1`이면 세션 쿠키에 `Secure` 플래그 적용(HTTPS 배포 시)
+- `FOIA_AUTH_SECRET`: 세션 서명키를 직접 지정(미설정 시 최초 실행 때 자동 생성해 DB에 저장).
+  여러 사용자가 접속하는 서버로 배포할 때의 리버스 프록시·TLS·DB 보호 방법은
+  `docs/DEPLOYMENT.md` 참고
 
 ## 디자인 시안
 

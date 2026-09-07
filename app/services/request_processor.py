@@ -13,6 +13,14 @@ from .ai_client import AIClient
 
 FILE_PATTERN = re.compile(r'^\d{6,8}_.+\.txt$')
 
+# 청구인 성명·연락처·원문 길이 상한. HTTP 접수(/requests/new)는 FastAPI Form()의
+# max_length로 먼저 거부되지만, 감시 폴더(data/watch) 자동 접수는 검증을 거치지 않고
+# 바로 이 함수로 들어오므로 여기서도 동일한 상한으로 잘라 DB에 과도하게 큰 값이
+# 쌓이는 것을 막는다.
+MAX_NAME_LEN = 100
+MAX_CONTACT_LEN = 200
+MAX_RAW_TEXT_LEN = 20000
+
 
 class RequestProcessorService:
     def __init__(self, db: Database, watch_dir: Path = WATCH_DIR, ai_client: AIClient | None = None):
@@ -93,6 +101,9 @@ class RequestProcessorService:
         return {'new_requests': new_count, 'watch_dir': str(watch_dir)}
 
     async def ingest(self, requester_name: str, requester_contact: str, channel: str, raw_text: str, source_file: str | None = None) -> int:
+        requester_name = (requester_name or '')[:MAX_NAME_LEN]
+        requester_contact = (requester_contact or '')[:MAX_CONTACT_LEN]
+        raw_text = (raw_text or '')[:MAX_RAW_TEXT_LEN]
         request_id = self.db.create_request(requester_name, requester_contact, channel, raw_text, source_file)
         await self._run_ai_identify(request_id)
         return request_id

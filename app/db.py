@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
@@ -30,6 +31,17 @@ class Database:
         self._migrate_request_columns()
         self._migrate_user_columns()
         self._seed_settings()
+        self._restrict_file_permissions()
+
+    def _restrict_file_permissions(self):
+        """이 DB 파일에는 비밀번호 해시·세션 서명키(auth_secret)·청구인 개인정보가 모두
+        들어있어, 파일 하나가 유출되면 피해가 크다. 최소한 소유자만 읽고 쓸 수 있도록
+        권한을 좁힌다. Windows는 POSIX 권한 비트를 그대로 쓰지 않아 완전한 제한은
+        안 되지만(별도로 icacls 필요), 리눅스/맥 배포 시에는 실제로 동작한다."""
+        try:
+            os.chmod(self.db_path, 0o600)
+        except OSError:
+            pass
 
     def _migrate_legacy_users_table(self):
         """이전 3역할(관리자/운영자/담당자) 스키마의 users 테이블이 남아있으면 제거하고

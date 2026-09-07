@@ -98,6 +98,12 @@ PUBLIC_PATHS = {'/health', '/favicon.ico', '/login', '/setup'}
 
 
 def _auth_secret() -> str:
+    # DB 파일 하나에 비밀번호 해시 + 개인정보 + 세션 서명키가 모두 몰리는 것을 피하고
+    # 싶다면 배포 시 FOIA_AUTH_SECRET 환경변수로 직접 주입할 수 있다(비밀 관리 도구 연동용).
+    # 미설정 시엔 기존처럼 최초 실행 때 자동 생성해 DB에 저장한다(하위 호환).
+    env_secret = os.getenv('FOIA_AUTH_SECRET', '').strip()
+    if env_secret:
+        return env_secret
     secret = db.get_setting('auth_secret', '')
     if not secret:
         secret = secrets.token_urlsafe(48)
@@ -126,6 +132,35 @@ def _verify_password(password: str, stored_hash: str) -> bool:
         return hmac.compare_digest(base64.b64encode(digest).decode('ascii'), digest_text)
     except Exception:
         return False
+
+
+# 로그인 무차별 대입 방어. 단일 프로세스(uvicorn 워커 1개) 전제의 메모리 기반 구현이라
+# 서버 재시작 시 초기화된다 — 내부 소수 사용자용 도구라 이 정도로 충분하다고 판단.
+# 여러 워커/여러 서버 인스턴스로 확장한다면 DB나 공유 캐시로 옮겨야 한다.
+_LOGIN_MAX_ATTEMPTS = 5
+_LOGIN_LOCKOUT_SECONDS = 300
+_login_attempts: dict[str, dict[str, float]] = {}
+
+
+def _login_lockout_remaining(username: str) -> int:
+    """이 계정이 잠겨 있으면 남은 초, 아니면 0."""
+    entry = _login_attempts.get(username)
+    if not entry:
+        return 0
+    remaining = entry.get('locked_until', 0) - time.time()
+    return max(0, int(remaining))
+
+
+def _register_login_failure(username: str) -> None:
+    entry = _login_attempts.setdefault(username, {'count': 0, 'locked_until': 0})
+    entry['count'] += 1
+    if entry['count'] >= _LOGIN_MAX_ATTEMPTS:
+        entry['locked_until'] = time.time() + _LOGIN_LOCKOUT_SECONDS
+        entry['count'] = 0
+
+
+def _register_login_success(username: str) -> None:
+    _login_attempts.pop(username, None)
 
 
 def _sign_session(username: str, expires_at: int) -> str:
@@ -298,14 +333,28 @@ async def login_page(request: Request, next: str = '/'):
 @app.post('/login')
 async def login(request: Request, username: str = Form(...), password: str = Form(...), next: str = Form('/')):
     username = username.strip()
+    locked_seconds = _login_lockout_remaining(username)
+    if locked_seconds > 0:
+        return templates.TemplateResponse(
+            request=request,
+            name='auth_login.html',
+            context={
+                'request': request, 'title': '로그인',
+                'error': f'로그인 시도가 너무 많아 계정이 잠겼습니다. {locked_seconds}초 후 다시 시도해주세요.',
+                'next': _safe_next_path(next),
+            },
+            status_code=429,
+        )
     user_row = db.get_user(username)
     if user_row is None or not _verify_password(password, user_row['password_hash']):
+        _register_login_failure(username)
         return templates.TemplateResponse(
             request=request,
             name='auth_login.html',
             context={'request': request, 'title': '로그인', 'error': '아이디 또는 비밀번호가 올바르지 않습니다.', 'next': _safe_next_path(next)},
             status_code=401,
         )
+    _register_login_success(username)
     target = _safe_next_path(next)
     if target == '/':
         target = _role_home(user_row['role'])
@@ -383,10 +432,10 @@ async def request_new_page(request: Request):
 @app.post('/requests/new')
 async def request_new_submit(
     request: Request,
-    requester_name: str = Form(...),
-    requester_contact: str = Form(''),
+    requester_name: str = Form(..., max_length=100),
+    requester_contact: str = Form('', max_length=200),
     channel: str = Form('텍스트'),
-    raw_text: str = Form(...),
+    raw_text: str = Form(..., max_length=20000),
 ):
     guard = _require_role(request, '배정담당자', '총괄관리자')
     if guard:
