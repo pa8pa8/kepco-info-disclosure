@@ -476,8 +476,11 @@ async def request_detail(request: Request, request_id: int):
         role == '총괄관리자' or (role == '업무담당자' and row['assigned_to'] == request.state.auth_user)
     )
     can_assign = (not is_finalized) and role in ('배정담당자', '총괄관리자') and not row['assigned_to']
-    staff_directory = [dict(r) for r in db.list_directory_by_role('업무담당자')] if can_assign else []
-    ai_result = _load_ai_recommendation(row) if can_assign else None
+    can_reject = (not is_finalized) and role == '업무담당자' and row['assigned_to'] == request.state.auth_user
+    staff_directory = [dict(r) for r in db.list_directory_by_role('업무담당자')] if (can_assign or can_reject) else []
+    if can_reject:
+        staff_directory = [s for s in staff_directory if s['username'] != request.state.auth_user]
+    ai_result = _load_recommendation(row) if can_assign else None
 
     return templates.TemplateResponse(
         request=request,
@@ -497,6 +500,7 @@ async def request_detail(request: Request, request_id: int):
             'repeat_match_row': repeat_match_row,
             'can_decide': can_decide,
             'can_assign': can_assign,
+            'can_reject': can_reject,
             'staff_directory': staff_directory,
             'ai_result': ai_result,
         },
@@ -635,7 +639,7 @@ async def dispatch_page(request: Request):
     # "AI 판단하기" 버튼을 눌러야 하는 상태로 남는다.
     ai_results = {}
     for r in unassigned:
-        result = _load_ai_recommendation(r)
+        result = _load_recommendation(r)
         if result:
             ai_results[r['id']] = result
     recent_assigned = db.list_recently_assigned()
@@ -680,7 +684,32 @@ def _load_ai_recommendation(row) -> dict | None:
         match = re.search(r'\b(staff\d+)\b', line)
         if match and match.group(1) in staff_pool and match.group(1) not in recommendations:
             recommendations.append(match.group(1))
-    return {'recommendations': recommendations, 'reason': reason}
+    return {'recommendations': recommendations, 'reason': reason, 'source': 'ai'}
+
+
+def _load_reassign_candidates(row) -> dict | None:
+    """업무담당자가 '거절(재배정 요청)'하며 지명한 1~3명이 있으면 반환한다.
+    AI 예시 추천과 달리 실제 사람이 지명한 것이라 우선순위가 더 높다(`_load_recommendation`
+    참고). 지명된 계정이 그 사이 삭제됐을 수도 있어 현재도 유효한 업무담당자인지 다시 확인한다."""
+    raw = row['reassign_candidates_json'] if 'reassign_candidates_json' in row.keys() else None
+    if not raw:
+        return None
+    try:
+        candidates = json.loads(raw)
+    except (ValueError, TypeError):
+        return None
+    staff_pool = {r['username'] for r in db.list_usernames_by_role('업무담당자')}
+    recommendations = [c for c in candidates if c in staff_pool]
+    if not recommendations:
+        return None
+    return {'recommendations': recommendations, 'reason': '', 'source': 'reassign'}
+
+
+def _load_recommendation(row) -> dict | None:
+    """배정 대기 화면/청구 상세에 보여줄 추천 담당자를 하나로 결정한다.
+    업무담당자가 실제로 지명한 재배정 후보가 있으면 그것을 우선하고, 없으면
+    사전 준비된 AI 예시 추천으로 대체한다."""
+    return _load_reassign_candidates(row) or _load_ai_recommendation(row)
 
 
 @app.post('/api/requests/{request_id}/recommend')
@@ -746,6 +775,42 @@ async def api_assign(request_id: int, request: Request):
     if decision and decision['final_notice_type']:
         return JSONResponse({'success': False, 'message': '이미 처리가 완료된 청구는 배정할 수 없습니다.'}, status_code=409)
     db.assign_request(request_id, assigned_to, assigned_by=request.state.auth_user)
+    return JSONResponse({'success': True})
+
+
+@app.post('/api/requests/{request_id}/reject')
+async def api_reject(request_id: int, request: Request):
+    """업무담당자가 잘못 배정된 청구를 거절한다. 단순 반려(담당자 없이 미배정으로만
+    돌리기)는 지원하지 않는다 — 반드시 1~3명의 재배정 후보를 지명해야 하며, 그 후보들이
+    배정 대기 화면에 추천으로 표시되어 배정담당자/총괄관리자가 최종 확정한다."""
+    guard = _require_role_api(request, '업무담당자')
+    if guard:
+        return guard
+    row = db.get_request(request_id)
+    if not row:
+        return JSONResponse({'success': False, 'message': '청구를 찾을 수 없습니다.'}, status_code=404)
+    if row['assigned_to'] != request.state.auth_user:
+        return JSONResponse({'success': False, 'message': '본인에게 배정된 청구만 재배정 요청할 수 있습니다.'}, status_code=403)
+    decision = db.get_decision(request_id)
+    if decision and decision['final_notice_type']:
+        return JSONResponse({'success': False, 'message': '이미 처리가 완료된 청구는 재배정할 수 없습니다.'}, status_code=409)
+
+    data = await request.json()
+    raw_candidates = data.get('candidates')
+    if not isinstance(raw_candidates, list):
+        return JSONResponse({'success': False, 'message': '재배정할 담당자를 선택해주세요.'}, status_code=400)
+    candidates = [c.strip() for c in raw_candidates if isinstance(c, str) and c.strip()]
+    candidates = list(dict.fromkeys(candidates))  # 순서를 유지하며 중복 제거
+    if not (1 <= len(candidates) <= 3):
+        return JSONResponse({'success': False, 'message': '재배정할 담당자를 1명 이상 3명 이하로 선택해주세요.'}, status_code=400)
+    if request.state.auth_user in candidates:
+        return JSONResponse({'success': False, 'message': '본인을 재배정 대상으로 선택할 수 없습니다.'}, status_code=400)
+    for username in candidates:
+        target_user = db.get_user(username)
+        if not target_user or target_user['role'] != '업무담당자':
+            return JSONResponse({'success': False, 'message': f'유효한 업무담당자가 아닙니다: {username}'}, status_code=400)
+
+    db.reject_and_nominate(request_id, candidates, actor=request.state.auth_user)
     return JSONResponse({'success': True})
 
 

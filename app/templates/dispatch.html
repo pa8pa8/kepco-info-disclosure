@@ -28,7 +28,10 @@
                 <div class="assign-panel-title">업무담당자 배정</div>
                 <div id="ai-result-{{ r['id'] }}" class="assign-recommend" {% if not ai %}style="display:none"{% endif %}>
                     {% if ai %}
-                    <div class="assign-panel-hint">추천 담당자를 선택하면 바로 배정됩니다.</div>
+                    <div class="assign-panel-hint">
+                        {% if ai.source == 'reassign' %}🔁 이전 담당자가 재배정을 요청했습니다 — 아래 중 선택하면 바로 배정됩니다.
+                        {% else %}추천 담당자를 선택하면 바로 배정됩니다.{% endif %}
+                    </div>
                     {% if ai.recommendations %}
                     <button class="rank-primary" onclick="assignRequestTo({{ r['id'] }}, '{{ ai.recommendations[0] }}')">
                         <span><span class="rank-badge">1순위</span>{{ ai.recommendations[0] }}</span><span>→</span>

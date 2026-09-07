@@ -77,7 +77,10 @@
             <script>window.STAFF_DIRECTORY = {{ staff_directory | tojson }};</script>
             <div id="ai-result-{{ item['id'] }}" class="assign-recommend" {% if not ai_result %}style="display:none"{% endif %}>
                 {% if ai_result %}
-                <div class="assign-panel-hint">🤖 AI 판단 결과 — 추천 담당자를 선택하면 바로 배정됩니다.</div>
+                <div class="assign-panel-hint">
+                    {% if ai_result.source == 'reassign' %}🔁 이전 담당자가 재배정을 요청했습니다 — 아래 중 선택하면 바로 배정됩니다.
+                    {% else %}🤖 AI 판단 결과 — 추천 담당자를 선택하면 바로 배정됩니다.{% endif %}
+                </div>
                 {% if ai_result.recommendations %}
                 <button class="rank-primary" onclick="assignRequestTo({{ item['id'] }}, '{{ ai_result.recommendations[0] }}')">
                     <span><span class="rank-badge">1순위</span>{{ ai_result.recommendations[0] }}</span><span>→</span>
@@ -126,6 +129,29 @@
                 <button class="btn-toggle" onclick="decideStep({{ item['id'] }}, '{{ step_key }}', false)">아니오 (N)</button>
             </div>
         </div>
+        {% if can_reject %}
+        <div class="panel-header" style="margin-top:18px"><h3>잘못 배정되었나요?</h3></div>
+        <div class="ai-guide-card" id="reject-panel-{{ item['id'] }}">
+            <div class="ai-guide-summary">이 청구가 본인 업무가 아니라면, 넘길 담당자를 1~3명 선택해 재배정을 요청하세요.
+            단순 거절(담당자 없이 반려)은 지원하지 않습니다 — 반드시 대상자를 지정해야 하며, 진행된 판단 내용은
+            다음 담당자가 이어받습니다.</div>
+            {% if staff_directory %}
+            <script>window.STAFF_DIRECTORY = {{ staff_directory | tojson }};</script>
+            <div class="dispatch-label" style="margin-top:12px">담당자 검색 (최소 1명, 최대 3명 선택)</div>
+            <div class="staff-search-wrap">
+                <input type="text" class="staff-search-input" data-request-id="{{ item['id'] }}" data-mode="reject"
+                       oninput="filterStaffSearch({{ item['id'] }})"
+                       placeholder="이름·지역본부·지사·부서로 검색" />
+                <div id="staff-results-{{ item['id'] }}" class="staff-search-results"></div>
+            </div>
+            <div class="log-sub" style="margin-top:8px">선택됨: <span id="reject-selected-{{ item['id'] }}">없음</span></div>
+            <button class="btn-danger" style="margin-top:10px" id="reject-submit-{{ item['id'] }}" disabled
+                    onclick="submitReject({{ item['id'] }})">선택한 담당자에게 재배정 요청</button>
+            {% else %}
+            <div class="auth-error" style="margin-top:10px">넘길 수 있는 다른 업무담당자 계정이 없습니다.</div>
+            {% endif %}
+        </div>
+        {% endif %}
         {% elif step_info %}
         <div class="panel-header" style="margin-top:18px"><h3>다음 판단</h3></div>
         <div class="notice">배정 대기 중입니다. 배정담당자가 업무담당자를 지정하면 처리할 수 있습니다.</div>

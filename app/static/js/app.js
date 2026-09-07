@@ -215,12 +215,98 @@ function renderStaffResults(requestId, query) {
 
 function filterStaffSearch(requestId) {
   const input = document.querySelector(`.staff-search-input[data-request-id="${requestId}"]`);
-  renderStaffResults(requestId, input ? input.value : '');
+  if (input && input.dataset.mode === 'reject') {
+    renderRejectSearchResults(requestId, input.value);
+  } else {
+    renderStaffResults(requestId, input ? input.value : '');
+  }
+}
+
+// ── 담당자 재배정 요청(거절) — 1~3명 다중 선택 ──────────────────────
+window._rejectSelections = window._rejectSelections || {};
+
+function renderRejectSearchResults(requestId, query) {
+  const box = document.getElementById(`staff-results-${requestId}`);
+  if (!box) return;
+  const dir = window.STAFF_DIRECTORY || [];
+  const q = (query || '').trim().toLowerCase();
+  const filtered = !q ? dir : dir.filter(s =>
+    [s.username, s.region, s.branch, s.department].filter(Boolean).join(' ').toLowerCase().includes(q)
+  );
+  if (!filtered.length) {
+    box.innerHTML = `<div class="log-sub" style="padding:8px 12px">검색 결과가 없습니다.</div>`;
+    return;
+  }
+  const selected = window._rejectSelections[requestId] || new Set();
+  box.innerHTML = filtered.map(s => `
+    <div class="staff-search-item" onclick="toggleRejectCandidate(${requestId}, '${s.username}')">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0" onclick="return false">
+        <input type="checkbox" ${selected.has(s.username) ? 'checked' : ''} style="pointer-events:none" />
+        <span>
+          <strong>${escapeHtml(s.username)}</strong>
+          <span class="log-sub">${escapeHtml(s.region || '-')} · ${escapeHtml(s.branch || '-')} · ${escapeHtml(s.department || '-')}</span>
+        </span>
+      </label>
+    </div>`).join('');
+}
+
+function toggleRejectCandidate(requestId, username) {
+  const selections = window._rejectSelections[requestId] || new Set();
+  if (selections.has(username)) {
+    selections.delete(username);
+  } else if (selections.size >= 3) {
+    showToast('최대 3명까지 선택할 수 있습니다.', true);
+    return;
+  } else {
+    selections.add(username);
+  }
+  window._rejectSelections[requestId] = selections;
+
+  const label = document.getElementById(`reject-selected-${requestId}`);
+  if (label) label.textContent = selections.size ? Array.from(selections).join(', ') : '없음';
+  const submitBtn = document.getElementById(`reject-submit-${requestId}`);
+  if (submitBtn) submitBtn.disabled = selections.size < 1;
+
+  const input = document.querySelector(`.staff-search-input[data-request-id="${requestId}"][data-mode="reject"]`);
+  renderRejectSearchResults(requestId, input ? input.value : '');
+}
+
+async function submitReject(requestId) {
+  const selections = window._rejectSelections[requestId] || new Set();
+  if (selections.size < 1 || selections.size > 3) {
+    showToast('재배정할 담당자를 1명 이상 3명 이하로 선택해주세요.', true);
+    return;
+  }
+  if (!confirm('선택한 담당자에게 재배정을 요청하시겠습니까? 이 청구는 본인 업무 목록에서 사라집니다.')) return;
+  const btn = document.getElementById(`reject-submit-${requestId}`);
+  if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
+  try {
+    const res = await fetch(`/api/requests/${requestId}/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ candidates: Array.from(selections) }),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      showToast(data.message || '재배정 요청에 실패했습니다.', true);
+      if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
+      return;
+    }
+    showToast('재배정을 요청했습니다.');
+    location.href = '/requests';
+  } catch (e) {
+    showToast('재배정 요청 중 오류가 발생했습니다.', true);
+    if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
+  }
 }
 
 function initAllStaffSearches() {
   document.querySelectorAll('.staff-search-input').forEach(input => {
-    renderStaffResults(input.dataset.requestId, '');
+    if (input.dataset.mode === 'reject') {
+      renderRejectSearchResults(input.dataset.requestId, '');
+    } else {
+      renderStaffResults(input.dataset.requestId, '');
+    }
   });
 }
 

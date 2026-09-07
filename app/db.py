@@ -61,6 +61,8 @@ class Database:
                 conn.execute('ALTER TABLE disclosure_requests ADD COLUMN assigned_at TEXT')
             if 'assigned_by' not in cols:
                 conn.execute('ALTER TABLE disclosure_requests ADD COLUMN assigned_by TEXT')
+            if 'reassign_candidates_json' not in cols:
+                conn.execute('ALTER TABLE disclosure_requests ADD COLUMN reassign_candidates_json TEXT')
 
     def _migrate_user_columns(self):
         """업무담당자 소속(1차사업소/2차사업소/부서) 컬럼을 기존 users 테이블에 보강한다."""
@@ -290,7 +292,8 @@ class Database:
     def assign_request(self, request_id: int, assigned_to: str, assigned_by: str):
         self.execute(
             '''UPDATE disclosure_requests
-               SET assigned_to = ?, assigned_by = ?, assigned_at = datetime('now', 'localtime'), updated_at = datetime('now', 'localtime')
+               SET assigned_to = ?, assigned_by = ?, assigned_at = datetime('now', 'localtime'),
+                   reassign_candidates_json = NULL, updated_at = datetime('now', 'localtime')
                WHERE id = ?''',
             (assigned_to, assigned_by, request_id),
         )
@@ -298,6 +301,25 @@ class Database:
             '''INSERT INTO decision_log (request_id, step_key, step_label, answer, article_ref, actor)
                VALUES (?, 'assign', '담당자 배정', ?, NULL, ?)''',
             (request_id, assigned_to, assigned_by),
+        )
+
+    def reject_and_nominate(self, request_id: int, candidates: list[str], actor: str):
+        """업무담당자가 잘못 배정된 청구를 거절 — 단순 반려는 없고, 반드시 1~3명의
+        재배정 후보를 지명해야 한다. 청구는 다시 미배정 상태가 되어 배정 대기 큐로
+        돌아가며, 배정담당자/총괄관리자가 지명된 후보 중 한 명을 클릭해 확정한다.
+        판단 위저드 진행 상태(request_decisions)는 건드리지 않는다 — 담당자만 바뀔 뿐,
+        이미 진행된 판단 내용은 다음 담당자가 이어받는다."""
+        self.execute(
+            '''UPDATE disclosure_requests
+               SET assigned_to = NULL, assigned_by = NULL, assigned_at = NULL,
+                   reassign_candidates_json = ?, updated_at = datetime('now', 'localtime')
+               WHERE id = ?''',
+            (json.dumps(candidates, ensure_ascii=False), request_id),
+        )
+        self.execute(
+            '''INSERT INTO decision_log (request_id, step_key, step_label, answer, article_ref, actor)
+               VALUES (?, 'reject', '담당자 재배정 요청', ?, NULL, ?)''',
+            (request_id, ', '.join(candidates), actor),
         )
 
     def count_unassigned_pending(self) -> int:
