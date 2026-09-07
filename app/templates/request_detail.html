@@ -79,7 +79,7 @@
             </div>
             <div class="content-gap">
                 {% if not ai_result %}
-                <button type="button" class="btn-toggle btn-full" onclick="recommendStaff({{ item['id'] }}, this)">🤖 AI 판단하기</button>
+                <button type="button" id="recommend-btn-{{ item['id'] }}" class="btn-toggle btn-full" onclick="recommendStaff({{ item['id'] }}, this)">🤖 AI 판단하기</button>
                 {% endif %}
                 <div class="dispatch-label content-gap">담당자 검색</div>
                 <div class="staff-search-wrap">

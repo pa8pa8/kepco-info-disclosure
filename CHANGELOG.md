@@ -306,3 +306,25 @@ Claude와 번갈아 작업하는 협업 구조에서 Codex가 진행한 작업. 
   연동 예정. `docs/PROJECT_REVIEW.md`(우선순위 3 아래 "확정된 향후 계획" 절 신규)와
   `README.md`(해당 절 각각에 인용구)에 기록 — 그 전까지 이 두 영역의 로컬 개선 작업
   (데모 계정 비밀번호 변경 유도, AI 데모 예시 세트 확장 등)은 진행하지 않는다.
+
+## v1.11 (2026-09-08) — 문서화 재점검
+
+상세 근거는 `logs/changes/2026-09-08/FOIA-0027-*.md` 참고.
+
+- 최근 티켓(FOIA-0017~0026)이 실제 코드와 일치하는지 서브에이전트로 전수 점검.
+  `docs/PROJECT_REVIEW.md`의 "테스트 코드 전무 → 완료" 항목 2곳이 FOIA-0020 시점
+  숫자(34개)로 남아있던 걸 발견해 현재(41개)로 갱신. 그 외에는 전부 정확했음.
+
+## v1.12 (2026-09-08) — 업무담당자 배정 추천: LLM · GradientBoost 두 엔진
+
+상세 근거는 `logs/changes/2026-09-08/FOIA-0028-*.md` 참고.
+
+- 사용자 지시로 "AI로 생성하기" 버튼이 실제 두 엔진을 돌리도록 교체
+  (`app/services/recommend/`). **GradientBoost**(TF-IDF 문자 2~3-gram +
+  `GradientBoostingClassifier`)는 실제로 동작 — 실제 배정 이력이 아직 10건뿐이라
+  부서별 전형 문구로 만든 합성 데이터로 학습(`tools/train_gbm_recommender.py`, 검증
+  정확도 68.8%). 추천 사유에 "합성 데이터로 학습된 모델" 경고를 항상 포함해 실제
+  이력 기반 추천으로 오인하지 않게 함. **LLM**은 인터페이스만 구축 — 공급자/API 키
+  관리/개인정보 외부 전송 여부가 미정이라 항상 "준비 중" 반환.
+- `requirements.txt`에 scikit-learn 등 5개 추가(Python 3.8+ 호환 유지를 위해 일부러
+  구버전으로 고정). `pytest` 7개 신규(`tests/test_recommend.py`), 전체 48개 통과.

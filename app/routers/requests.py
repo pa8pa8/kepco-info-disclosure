@@ -14,6 +14,7 @@ from ..config import APP_TITLE
 from ..deps import db, load_ai_recommendation, load_recommendation, templates, with_deadline
 from ..security import read_json_body, require_csrf_api, require_role, require_role_api, role_home
 from ..services import foia_core
+from ..services.recommend import ENGINES as RECOMMEND_ENGINES
 
 router = APIRouter()
 
@@ -196,10 +197,12 @@ async def api_recommend(request_id: int, request: Request):
 
 @router.post('/api/requests/{request_id}/generate-recommendation')
 async def api_generate_recommendation(request_id: int, request: Request):
-    """"AI로 생성하기" 버튼 핸들러.
+    """"AI로 생성하기" 버튼 핸들러 — 예시 파일이 없는 청구에서 실제 추천 엔진을 돌린다.
 
-    이 데모에는 실제 생성 로직도, 무작위 추천도 없다 — 예시 결과 파일이 미리
-    준비된 5건에 대해서만 판단 결과를 보여줄 수 있다는 점을 그대로 안내한다.
+    LLM과 GradientBoost 두 엔진을 각각 시도해 나란히 반환한다(둘 다 비교해볼 수 있게).
+    GradientBoost는 실제로 동작하고(합성 데이터로 학습, `tools/train_gbm_recommender.py`),
+    LLM은 아직 인터페이스만 있어 항상 `available: false`를 반환한다
+    (`app/services/recommend/llm_recommender.py` 참고).
     """
     guard = require_role_api(request, roles.DISPATCHER, roles.MANAGER)
     if guard:
@@ -207,10 +210,17 @@ async def api_generate_recommendation(request_id: int, request: Request):
     guard = require_csrf_api(request)
     if guard:
         return guard
-    return JSONResponse({
-        'success': False,
-        'message': '이 데모에서는 사전에 준비된 예시 5건에 한해서만 AI 판단 결과를 확인할 수 있습니다. 실제 AI 연동은 추후 적용될 예정입니다.',
-    })
+    row = db.get_request(request_id)
+    if not row:
+        return JSONResponse({'success': False, 'message': '청구를 찾을 수 없습니다.'}, status_code=404)
+    if row['assigned_to']:
+        return JSONResponse({'success': False, 'message': '이미 배정된 청구입니다.'}, status_code=409)
+    decision = db.get_decision(request_id)
+    if decision and decision['final_notice_type']:
+        return JSONResponse({'success': False, 'message': '이미 처리가 완료된 청구는 배정할 수 없습니다.'}, status_code=409)
+
+    engines = {name: engine.recommend(row) for name, engine in RECOMMEND_ENGINES.items()}
+    return JSONResponse({'success': True, 'engines': engines})
 
 
 @router.post('/api/requests/{request_id}/assign')

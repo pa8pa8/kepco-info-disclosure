@@ -227,6 +227,7 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--accent); width
 .rank-primary:hover { background: #d8e5fd; }
 .rank-primary .rank-badge { color: var(--krds-primary-60); font-size: .9375rem; }
 .rank-secondary-row { gap: 12px; }
+.engine-result + .engine-result { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
 .rank-secondary { min-height: 64px; padding: 12px 16px; border-radius: 6px; font-size: 1.0625rem; background: var(--panel); }
 .rank-secondary .rank-badge { font-size: .9375rem; }
 .staff-search-wrap { max-width: none; }

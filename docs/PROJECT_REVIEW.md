@@ -87,18 +87,23 @@ README의 "알려진 제약사항"에 없는 리스크와 개선 항목**을 다
 10. 공식 KRDS Figma 컴포넌트 라이브러리 인스턴스 적용 여부 확정 (현재는 색상·레이아웃
     토큰 수준의 근사치 — Figma MCP 연결 방법 결정 필요)
 
-### 확정된 향후 계획 (사용자 지시, 2026-09-08) — 지금은 착수하지 않음
-11. **로그인/계정을 회사 DB와 연동 예정.** 지금의 로컬 계정(pbkdf2 해싱 + `users` 테이블,
-    `admin`/`manager`/`dispatcher`/`staff1~10` 데모 계정)은 그 전까지의 임시 구조다.
-    → 그래서 "기본 데모 계정 비밀번호 변경 유도"(우선순위 1의 2번) 같은 로컬 계정 강화
-    작업은 지금 진행하지 않는다 — 회사 DB 연동 시 계정 모델 자체가 바뀌므로 그 위에
-    쌓을 이유가 없다.
-12. **"AI 판단"을 실제 AI로 연동 예정.** 지금의 `/api/requests/{id}/recommend`·
-    `/generate-recommendation`은 사전 준비된 예시 5건(`data/ai_recommendations/`)만
-    보여주는 데모이고 실시간 추론은 없다(README "배정 대기 화면의 AI 판단하기" 절 참고).
-    → 그래서 이 데모 로직 자체를 다듬는 작업(예시 세트 확장, 가짜 추천 사유 개선 등)은
-    지금 진행하지 않는다. 실제 연동 시 `app/services/ai_client.py`(AI HTTP 클라이언트
-    추상화, 이미 존재)가 연동 지점이 될 가능성이 높다.
+### 확정된 향후 계획 (사용자 지시, 2026-09-08)
+11. **로그인/계정을 회사 DB와 연동 예정 — 지금은 착수하지 않음.** 지금의 로컬 계정
+    (pbkdf2 해싱 + `users` 테이블, `admin`/`manager`/`dispatcher`/`staff1~10` 데모 계정)은
+    그 전까지의 임시 구조다. → 그래서 "기본 데모 계정 비밀번호 변경 유도"(우선순위 1의
+    2번) 같은 로컬 계정 강화 작업은 지금 진행하지 않는다 — 회사 DB 연동 시 계정 모델
+    자체가 바뀌므로 그 위에 쌓을 이유가 없다.
+12. **업무담당자 배정 추천을 LLM과 GradientBoost 두 엔진으로 시도(FOIA-0028, 착수함).**
+    `/api/requests/{id}/recommend`(예시 5건 조회)는 그대로 두고, "AI로 생성하기"
+    (`/generate-recommendation`)가 이제 실제로 두 엔진을 각각 돌려 나란히 보여준다
+    (`app/services/recommend/`). GradientBoost(TF-IDF + `GradientBoostingClassifier`)는
+    실제로 동작 — 다만 실제 배정 이력이 아직 거의 없어(10건) 부서별 전형적인 청구 문구로
+    만든 합성 데이터로 학습했다(`app/services/recommend/synthetic_data.py`,
+    `tools/train_gbm_recommender.py`). 회사 DB 연동으로 실제 배정 이력이 쌓이면 그
+    데이터로 재학습해야 한다. LLM은 인터페이스만 구축(어떤 공급자를 쓸지, API 키 관리,
+    청구인 개인정보의 외부 전송 여부가 아직 미정이라 항상 "준비 중"을 반환,
+    `app/services/recommend/llm_recommender.py`의 TODO가 실제 연동 지점).
+    요청대상 추출·반복청구 판정 같은 나머지 AI 기능은 이번 범위 밖 — 여전히 데모.
 
 ## 5. 참고
 - 개발 서버가 이전 세션부터 `http://127.0.0.1:8000`에서 계속 실행 중입니다. 이 점검·문서화

@@ -407,13 +407,53 @@ function renderNoResult(requestId, message) {
 }
 
 async function generateRecommendation(requestId) {
+  const box = document.getElementById(`ai-result-${requestId}`);
+  if (box) box.innerHTML = `<div class="log-sub">추천 생성 중...</div>`;
   try {
     const res = await fetch(`/api/requests/${requestId}/generate-recommendation`, { method: 'POST', headers: { 'X-CSRF-Token': getCsrfToken() } });
     const data = await res.json();
-    showToast(data.message || '요청을 처리했습니다.', !data.success);
+    if (!data.success) {
+      showToast(data.message || '요청 처리에 실패했습니다.', true);
+      if (box) renderNoResult(requestId, data.message);
+      return;
+    }
+    renderEngineComparison(requestId, data.engines || {});
   } catch (e) {
     showToast('요청 처리 중 오류가 발생했습니다.', true);
   }
+}
+
+const RECOMMEND_ENGINE_LABELS = { gbm: '📊 GradientBoost 추천', llm: '🧠 LLM 추천' };
+const RECOMMEND_ENGINE_ORDER = ['gbm', 'llm'];
+
+function renderEngineComparison(requestId, engines) {
+  const box = document.getElementById(`ai-result-${requestId}`);
+  if (!box) return;
+  const sections = RECOMMEND_ENGINE_ORDER
+    .filter(key => engines[key])
+    .map(key => {
+      const engine = engines[key];
+      const label = RECOMMEND_ENGINE_LABELS[key] || key;
+      if (!engine.available) {
+        return `<div class="engine-result">
+          <div class="dispatch-label">${label}</div>
+          <div class="log-sub">${escapeHtml(engine.message || '사용할 수 없습니다.')}</div>
+        </div>`;
+      }
+      const buttons = engine.recommendations.map((name, i) => `
+        <button type="button" class="rank-secondary" onclick="assignRequestTo(${requestId}, '${name}')">
+          <span class="rank-badge">${i + 1}순위</span>${escapeHtml(name)}
+        </button>`).join('');
+      return `<div class="engine-result">
+        <div class="dispatch-label">${label}</div>
+        <div class="rank-secondary-row">${buttons}</div>
+        ${engine.reason ? `<div class="assign-reason">${escapeHtml(engine.reason)}</div>` : ''}
+      </div>`;
+    });
+  box.innerHTML = sections.join('') || `<div class="log-sub">추천 결과가 없습니다.</div>`;
+  box.style.display = 'block';
+  const recommendBtn = document.getElementById(`recommend-btn-${requestId}`);
+  if (recommendBtn) recommendBtn.style.display = 'none';
 }
 
 function updateClock() {

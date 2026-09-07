@@ -56,7 +56,7 @@
                 </div>
                 {% if not ai %}
                 <div class="assign-panel-hint">추천 담당자를 확인하려면 아래 버튼을 눌러주세요.</div>
-                <button type="button" class="btn-toggle btn-full"
+                <button type="button" id="recommend-btn-{{ r['id'] }}" class="btn-toggle btn-full"
                         onclick="recommendStaff({{ r['id'] }}, this)" {% if not staff_directory %}disabled{% endif %}>🤖 AI 판단하기</button>
                 {% endif %}
                 <div class="dispatch-label content-gap">담당자 검색</div>

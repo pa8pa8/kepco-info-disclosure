@@ -32,6 +32,10 @@ AI_RESULTS_DIR = Path(os.getenv('FOIA_AI_RESULTS_DIR', str(DATA_DIR / 'ai_recomm
 AI_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 DB_PATH = Path(os.getenv('FOIA_DB_PATH', str(DATA_DIR / 'info_disclosure.db')))
+
+# 배정 추천 GradientBoost 모델 위치. `tools/train_gbm_recommender.py`가 만들고,
+# `app/services/recommend/gbm_recommender.py`가 읽기만 한다.
+GBM_MODEL_PATH = Path(os.getenv('FOIA_GBM_MODEL_PATH', str(DATA_DIR / 'models' / 'gbm_recommender.joblib')))
 AI_SERVER_HOST = os.getenv('FOIA_AI_SERVER_HOST', '127.0.0.1').strip()
 AI_SERVER_PORT = int(os.getenv('FOIA_AI_SERVER_PORT', '8011'))
 INTERNAL_AI_API_URL = f'http://{AI_SERVER_HOST}:{AI_SERVER_PORT}/identify'
