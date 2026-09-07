@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager
 from urllib.parse import quote
 
 import asyncio
+import os
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -32,10 +33,13 @@ async def lifespan(app: FastAPI):
         if db.get_user(username) is None:
             db.create_user(username, hash_password(password), role, region, branch, department)
     db.set_setting('ai_api_url', INTERNAL_AI_API_URL)
-    try:
-        await asyncio.to_thread(local_ai_server.start)
-    except Exception as exc:
-        print(f'[local-ai] failed to start: {exc}')
+    # 자동화 테스트에서는 별도 uvicorn 스레드/사이드카 exe를 띄우는 로컬 AI 서버를
+    # 기동하지 않는다 — 테스트가 실제 포트 바인딩·프로세스 생성에 의존하지 않게 한다.
+    if not os.getenv('FOIA_SKIP_AI_SERVER'):
+        try:
+            await asyncio.to_thread(local_ai_server.start)
+        except Exception as exc:
+            print(f'[local-ai] failed to start: {exc}')
 
     interval = int(db.get_setting('scan_interval', '60') or '60')
     await processor.start(interval)

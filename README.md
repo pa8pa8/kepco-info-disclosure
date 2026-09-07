@@ -27,11 +27,20 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
+### 테스트 실행
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+`tests/`에 FastAPI `TestClient` 기반 자동화 테스트가 있습니다(인증/계정 잠금, 역할별 접근
+통제, 배정·거절·재배정·판단 흐름, 계정 관리). 테스트는 임시 SQLite DB를 새로 만들어 쓰므로
+실제 `data/info_disclosure.db`에는 영향이 없습니다.
+
 ## 계정과 화면
 
 로그인 계정에 따라 접속 즉시 다른 화면으로 이동하며, 다른 역할의 URL로 직접 들어가려 해도
 서버가 자기 화면으로 되돌려보냅니다(API는 403). 서버를 처음 켰을 때 없는 계정은 아래
-기준으로 자동 생성됩니다(`app/main.py`의 `DEFAULT_ACCOUNTS`, 계정별로 없을 때만 생성 —
+기준으로 자동 생성됩니다(`app/deps.py`의 `DEFAULT_ACCOUNTS`, 계정별로 없을 때만 생성 —
 이미 있는 계정의 비밀번호는 건드리지 않음).
 
 | 역할 | 기본 계정 | 로그인 후 첫 화면 | 할 수 있는 일 | 소속 |

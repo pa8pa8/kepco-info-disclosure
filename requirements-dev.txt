@@ -1,0 +1,4 @@
+# 자동화 테스트 실행에만 필요 — 배포 서버에는 설치하지 않는다(requirements.txt는
+# 최소 의존성 원칙을 유지). `pip install -r requirements.txt -r requirements-dev.txt`
+-r requirements.txt
+pytest==9.1.1
