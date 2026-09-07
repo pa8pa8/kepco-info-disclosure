@@ -63,6 +63,8 @@ class Database:
                 conn.execute('ALTER TABLE disclosure_requests ADD COLUMN assigned_by TEXT')
             if 'reassign_candidates_json' not in cols:
                 conn.execute('ALTER TABLE disclosure_requests ADD COLUMN reassign_candidates_json TEXT')
+            if 'deadline_extended' not in cols:
+                conn.execute('ALTER TABLE disclosure_requests ADD COLUMN deadline_extended INTEGER NOT NULL DEFAULT 0')
 
     def _migrate_user_columns(self):
         """업무담당자 소속(1차사업소/2차사업소/부서) 컬럼을 기존 users 테이블에 보강한다."""
@@ -318,6 +320,21 @@ class Database:
             '''INSERT INTO decision_log (request_id, step_key, step_label, answer, article_ref, actor)
                VALUES (?, 'reassign', '담당자 재배정', ?, NULL, ?)''',
             (request_id, answer, assigned_by),
+        )
+
+    def extend_deadline(self, request_id: int, actor: str, reason: str = ''):
+        """정보공개법 제11조 제2항: 부득이한 사유가 있으면 1회에 한해 10일 범위에서
+        처리기한을 연장할 수 있다. 몇 번이고 다시 호출해도 플래그만 세팅될 뿐 누적
+        연장은 되지 않는다 — 호출 전 이미 연장됐는지는 API 라우트에서 확인한다."""
+        self.execute(
+            "UPDATE disclosure_requests SET deadline_extended = 1, updated_at = datetime('now', 'localtime') WHERE id = ?",
+            (request_id,),
+        )
+        answer = f'10일 연장 (사유: {reason})' if reason else '10일 연장'
+        self.execute(
+            '''INSERT INTO decision_log (request_id, step_key, step_label, answer, article_ref, actor)
+               VALUES (?, 'extend', '처리기한 연장', ?, '제11조 제2항', ?)''',
+            (request_id, answer, actor),
         )
 
     def reject_and_nominate(self, request_id: int, candidates: list[str], actor: str):

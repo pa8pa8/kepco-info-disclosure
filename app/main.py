@@ -401,7 +401,7 @@ async def request_list(
         return guard
     role = request.state.auth_role
     assigned_to = request.state.auth_user if role == '업무담당자' else None
-    rows = db.list_requests(status=status, notice_type=notice_type, q=q, assigned_to=assigned_to)
+    rows = [_with_deadline(dict(r)) for r in db.list_requests(status=status, notice_type=notice_type, q=q, assigned_to=assigned_to)]
     return templates.TemplateResponse(
         request=request,
         name='requests.html',
@@ -478,6 +478,8 @@ async def request_detail(request: Request, request_id: int):
     can_assign = (not is_finalized) and role in ('배정담당자', '총괄관리자') and not row['assigned_to']
     can_reject = (not is_finalized) and role == '업무담당자' and row['assigned_to'] == request.state.auth_user
     can_reassign = (not is_finalized) and role in ('배정담당자', '총괄관리자') and bool(row['assigned_to'])
+    deadline_info = foia_core.compute_deadline_info(row['received_at'], bool(row['deadline_extended']), is_finalized)
+    can_extend = can_decide and not row['deadline_extended']
     staff_directory = [dict(r) for r in db.list_directory_by_role('업무담당자')] if (can_assign or can_reject or can_reassign) else []
     if can_reject:
         staff_directory = [s for s in staff_directory if s['username'] != request.state.auth_user]
@@ -505,6 +507,8 @@ async def request_detail(request: Request, request_id: int):
             'can_assign': can_assign,
             'can_reject': can_reject,
             'can_reassign': can_reassign,
+            'deadline_info': deadline_info,
+            'can_extend': can_extend,
             'staff_directory': staff_directory,
             'ai_result': ai_result,
         },
@@ -638,7 +642,7 @@ async def dispatch_page(request: Request):
     guard = _require_role(request, '배정담당자')
     if guard:
         return guard
-    unassigned = db.list_requests(status='판단중', unassigned_only=True)
+    unassigned = [_with_deadline(dict(r)) for r in db.list_requests(status='판단중', unassigned_only=True)]
     # 이미 예시 결과 파일이 준비된 건은 클릭 없이 바로 보여준다 — 나머지(예시 없는 건)만
     # "AI 판단하기" 버튼을 눌러야 하는 상태로 남는다.
     ai_results = {}
@@ -660,6 +664,17 @@ async def dispatch_page(request: Request):
             'staff_directory': staff_directory,
         },
     )
+
+
+def _with_deadline(row: dict) -> dict:
+    """청구 dict에 처리기한 정보(`deadline`)를 계산해 붙여 반환한다. 목록/배정 대기
+    화면에서 재사용하기 위한 공통 헬퍼."""
+    row['deadline'] = foia_core.compute_deadline_info(
+        row.get('received_at'),
+        bool(row.get('deadline_extended')),
+        bool(row.get('final_notice_type')),
+    )
+    return row
 
 
 def _load_ai_recommendation(row) -> dict | None:
@@ -824,6 +839,31 @@ async def api_reject(request_id: int, request: Request):
     return JSONResponse({'success': True})
 
 
+@app.post('/api/requests/{request_id}/extend-deadline')
+async def api_extend_deadline(request_id: int, request: Request):
+    """정보공개법 제11조 제2항: 부득이한 사유가 있으면 1회에 한해 10일 범위에서 처리기한을
+    연장한다. 배정된 업무담당자 본인 또는 총괄관리자만 가능하고, 이미 연장했거나 완료된
+    건은 다시 연장할 수 없다."""
+    guard = _require_role_api(request, '총괄관리자', '업무담당자')
+    if guard:
+        return guard
+    row = db.get_request(request_id)
+    if not row:
+        return JSONResponse({'success': False, 'message': '청구를 찾을 수 없습니다.'}, status_code=404)
+    if request.state.auth_role == '업무담당자' and row['assigned_to'] != request.state.auth_user:
+        return JSONResponse({'success': False, 'message': '본인에게 배정된 청구만 연장할 수 있습니다.'}, status_code=403)
+    decision = db.get_decision(request_id)
+    if decision and decision['final_notice_type']:
+        return JSONResponse({'success': False, 'message': '이미 처리가 완료된 청구는 연장할 수 없습니다.'}, status_code=409)
+    if row['deadline_extended']:
+        return JSONResponse({'success': False, 'message': '이미 한 차례 연장된 청구입니다.'}, status_code=409)
+
+    data = await request.json()
+    reason = (data.get('reason') or '').strip()[:200]
+    db.extend_deadline(request_id, actor=request.state.auth_user, reason=reason)
+    return JSONResponse({'success': True})
+
+
 # ── API ────────────────────────────────────────────────────────────
 
 @app.get('/api/settings')
@@ -849,8 +889,8 @@ async def api_requests(request: Request, limit: int = Query(default=50, ge=1, le
     guard = _require_role_api(request, '총괄관리자')
     if guard:
         return guard
-    rows = db.list_requests(limit=limit)
-    return JSONResponse([dict(r) for r in rows])
+    rows = [_with_deadline(dict(r)) for r in db.list_requests(limit=limit)]
+    return JSONResponse(rows)
 
 
 @app.post('/api/watch/scan')

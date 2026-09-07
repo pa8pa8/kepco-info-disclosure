@@ -65,7 +65,9 @@ function renderPendingList(rows) {
         <div class="log-time">${r.received_at || '-'}</div>
         <div class="log-server">#${r.id}</div>
         <div class="log-message">
-          <div class="log-summary">${r.requester_name} · ${r.request_target || '식별 중'}</div>
+          <div class="log-summary">${r.requester_name} · ${r.request_target || '식별 중'}
+            ${r.deadline ? `<span class="status-pill ${r.deadline.tone}" style="margin-left:6px" title="${escapeHtml(r.deadline.label)}">${escapeHtml(r.deadline.short_label)}</span>` : ''}
+          </div>
           <div class="log-sub">현재 단계: ${r.current_step || '-'}</div>
         </div>
       </div>
@@ -101,6 +103,14 @@ async function loadDashboard() {
   renderRecentList(requests);
   const unassignedBadge = document.getElementById('unassigned-badge');
   if (unassignedBadge) unassignedBadge.textContent = `배정 대기: ${summary.unassigned_count || 0}건`;
+
+  const deadlineBadge = document.getElementById('deadline-badge');
+  if (deadlineBadge) {
+    const overdue = requests.filter(r => r.deadline && r.deadline.tone === 'fault').length;
+    const urgent = requests.filter(r => r.deadline && r.deadline.tone === 'warning').length;
+    deadlineBadge.textContent = `처리기한: 초과 ${overdue}건 · 임박 ${urgent}건`;
+    deadlineBadge.className = 'badge' + (overdue ? ' warn' : '');
+  }
 
   const lastScan = document.getElementById('last-scan-badge');
   if (lastScan) lastScan.textContent = `마지막 갱신: -`;
@@ -141,6 +151,27 @@ async function testAI(event) {
     if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
   }
   return false;
+}
+
+async function extendDeadline(requestId) {
+  const reason = prompt('연장 사유를 입력해주세요 (선택 사항, 정보공개법 제11조 제2항 "부득이한 사유"):', '') || '';
+  if (!confirm('처리기한을 10일 연장하시겠습니까? 한 청구당 한 번만 가능합니다.')) return;
+  try {
+    const res = await fetch(`/api/requests/${requestId}/extend-deadline`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      showToast(data.message || '연장에 실패했습니다.', true);
+      return;
+    }
+    showToast('처리기한을 10일 연장했습니다.');
+    location.reload();
+  } catch (e) {
+    showToast('연장 처리 중 오류가 발생했습니다.', true);
+  }
 }
 
 async function decideStep(requestId, stepKey, answer) {

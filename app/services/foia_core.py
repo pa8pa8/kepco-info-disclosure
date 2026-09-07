@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 from typing import Any
 
 # 흐름도(docs/blueprint.jpeg -> docs/blueprint.html) 그대로 인코딩한 판단 그래프.
@@ -126,3 +127,56 @@ def default_notice_text(templates: dict[str, str], notice_type: str, request_tar
     if request_target:
         return f'{base}\n\n(청구 요청대상: {request_target})'
     return base
+
+
+# 정보공개법 제11조: 청구를 받은 날부터 10일 이내 공개 여부 결정, 부득이한 사유가 있으면
+# 1회에 한해 10일 범위에서 연장 가능(제11조 제2항). 역일(달력일) 기준으로 계산한다 —
+# 실제로는 공휴일 등을 뺀 근무일 기준으로 볼 여지도 있어 참고용이며 법률 자문이 아니다
+# (README "알려진 제약사항" 참고).
+STATUTORY_DAYS = 10
+EXTENSION_DAYS = 10
+
+
+def compute_deadline_info(received_at: str | None, extended: bool, is_finalized: bool) -> dict[str, Any] | None:
+    """접수시각 문자열('YYYY-MM-DD HH:MM:SS' 형식)로부터 처리기한 정보를 계산한다.
+    접수시각을 파싱할 수 없으면 None을 반환해 화면에서 조용히 생략할 수 있게 한다."""
+    if not received_at:
+        return None
+    try:
+        received_date = dt.datetime.strptime(received_at[:10], '%Y-%m-%d').date()
+    except ValueError:
+        return None
+
+    total_days = STATUTORY_DAYS + (EXTENSION_DAYS if extended else 0)
+    deadline_date = received_date + dt.timedelta(days=total_days)
+    days_remaining = (deadline_date - dt.date.today()).days
+
+    if is_finalized:
+        tone = 'unknown'
+        short_label = '완료'
+        label = f"{deadline_date.isoformat()} 기한 내 완료" if days_remaining >= 0 else f"{deadline_date.isoformat()} 기한 초과 후 완료"
+    elif days_remaining < 0:
+        tone = 'fault'
+        short_label = f"기한초과 D+{-days_remaining}"
+        label = f"기한 초과 D+{-days_remaining} ({deadline_date.isoformat()})"
+    elif days_remaining == 0:
+        tone = 'fault'
+        short_label = '오늘마감'
+        label = f"오늘 마감 ({deadline_date.isoformat()})"
+    elif days_remaining <= 3:
+        tone = 'warning'
+        short_label = f"D-{days_remaining}"
+        label = f"D-{days_remaining} ({deadline_date.isoformat()})"
+    else:
+        tone = 'normal'
+        short_label = f"D-{days_remaining}"
+        label = f"D-{days_remaining} ({deadline_date.isoformat()})"
+
+    return {
+        'deadline_date': deadline_date.isoformat(),
+        'days_remaining': days_remaining,
+        'extended': extended,
+        'tone': tone,
+        'short_label': short_label,
+        'label': label,
+    }

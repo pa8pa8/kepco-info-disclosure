@@ -33,6 +33,7 @@
                 <tr>
                     <th class="col-time">접수시각</th><th class="col-name">청구인</th><th>요청대상</th>
                     {% if not is_my_queue %}<th class="col-name">배정</th>{% endif %}
+                    <th class="col-pill">처리기한</th>
                     <th class="col-pill">상태</th><th class="col-pill">통지 유형</th><th class="col-action"></th>
                 </tr>
             </thead>
@@ -45,6 +46,11 @@
                     {% if not is_my_queue %}
                     <td class="col-name">{{ r['assigned_to'] or '-' }}</td>
                     {% endif %}
+                    <td class="col-pill">
+                        {% if r.deadline %}
+                        <span class="status-pill {{ r.deadline.tone }}" title="{{ r.deadline.label }}">{{ r.deadline.short_label }}</span>
+                        {% else %}-{% endif %}
+                    </td>
                     <td class="col-pill"><span class="status-pill {{ status_tone.get(r['status'], 'unknown') }}">{{ r['status'] }}</span></td>
                     <td class="col-pill">
                         {% if r['final_notice_type'] %}
@@ -56,7 +62,7 @@
                     <td class="col-action"><a href="/requests/{{ r['id'] }}" class="btn-toggle">상세</a></td>
                 </tr>
                 {% else %}
-                <tr><td colspan="7">접수된 청구가 없습니다.</td></tr>
+                <tr><td colspan="8">접수된 청구가 없습니다.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

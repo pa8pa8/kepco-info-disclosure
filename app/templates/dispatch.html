@@ -17,6 +17,9 @@
                 <div class="dispatch-card-head">
                     <strong><a href="/requests/{{ r['id'] }}">#{{ r['id'] }} {{ r['requester_name'] }}</a></strong>
                     <span class="badge">미배정</span>
+                    {% if r.deadline %}
+                    <span class="status-pill {{ r.deadline.tone }}" title="{{ r.deadline.label }}">{{ r.deadline.short_label }}</span>
+                    {% endif %}
                     <span class="log-sub">{{ r['received_at'] }} · {{ r['channel'] }}</span>
                 </div>
                 <div class="dispatch-target">{{ r['request_target'] or '요청대상 식별 중' }}</div>
