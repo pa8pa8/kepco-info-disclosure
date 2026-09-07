@@ -9,7 +9,7 @@ const NOTICE_TONE = {
 
 function emptyState(icon, text, hint) {
   return `<div class="empty-state">
-    <div class="empty-state-icon">${icon}</div>
+    <div class="empty-state-icon" aria-hidden="true">${icon}</div>
     <div class="empty-state-text">${text}</div>
     ${hint ? `<div class="empty-state-hint">${hint}</div>` : ''}
   </div>`;
@@ -46,7 +46,7 @@ function renderSummaryCards(summary) {
   ];
   root.innerHTML = cards.map(c => `
     <div class="summary-card ${c.tone}">
-      <div class="sc-label">${c.icon} ${NOTICE_LABELS[c.key]}</div>
+      <div class="sc-label"><span aria-hidden="true">${c.icon}</span> ${NOTICE_LABELS[c.key]}</div>
       <div class="sc-value">${counts[c.key] || 0}</div>
     </div>`).join('');
 }
