@@ -60,13 +60,13 @@ function renderPendingList(rows) {
     return;
   }
   root.innerHTML = pending.map(r => `
-    <a href="/requests/${r.id}" style="text-decoration:none">
+    <a href="/requests/${r.id}" class="queue-link">
       <div class="log-row">
         <div class="log-time">${r.received_at || '-'}</div>
         <div class="log-server">#${r.id}</div>
         <div class="log-message">
           <div class="log-summary">${r.requester_name} · ${r.request_target || '식별 중'}
-            ${r.deadline ? `<span class="status-pill ${r.deadline.tone}" style="margin-left:6px" title="${escapeHtml(r.deadline.label)}">${escapeHtml(r.deadline.short_label)}</span>` : ''}
+            ${r.deadline ? `<span class="status-pill ${r.deadline.tone} deadline-inline" title="${escapeHtml(r.deadline.label)}">${escapeHtml(r.deadline.short_label)}</span>` : ''}
           </div>
           <div class="log-sub">현재 단계: ${r.current_step || '-'}</div>
         </div>
@@ -234,14 +234,15 @@ function renderStaffResults(requestId, query) {
     [s.username, s.region, s.branch, s.department].filter(Boolean).join(' ').toLowerCase().includes(q)
   );
   if (!filtered.length) {
-    box.innerHTML = `<div class="log-sub" style="padding:8px 12px">검색 결과가 없습니다.</div>`;
+    box.innerHTML = `<div class="log-sub staff-search-empty">검색 결과가 없습니다.</div>`;
     return;
   }
   box.innerHTML = filtered.map(s => `
-    <div class="staff-search-item" onclick="assignRequestTo(${requestId}, '${s.username}')">
+    <button type="button" class="staff-search-item" data-staff-username="${escapeHtml(s.username).replace(/"/g, '&quot;')}"
+            onclick="assignRequestTo(${requestId}, this.dataset.staffUsername)">
       <strong>${escapeHtml(s.username)}</strong>
       <span class="log-sub">${escapeHtml(s.region || '-')} · ${escapeHtml(s.branch || '-')} · ${escapeHtml(s.department || '-')}</span>
-    </div>`).join('');
+    </button>`).join('');
 }
 
 function filterStaffSearch(requestId) {
@@ -265,23 +266,25 @@ function renderRejectSearchResults(requestId, query) {
     [s.username, s.region, s.branch, s.department].filter(Boolean).join(' ').toLowerCase().includes(q)
   );
   if (!filtered.length) {
-    box.innerHTML = `<div class="log-sub" style="padding:8px 12px">검색 결과가 없습니다.</div>`;
+    box.innerHTML = `<div class="log-sub staff-search-empty">검색 결과가 없습니다.</div>`;
     return;
   }
   const selected = window._rejectSelections[requestId] || new Set();
   box.innerHTML = filtered.map(s => `
-    <div class="staff-search-item" onclick="toggleRejectCandidate(${requestId}, '${s.username}')">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0" onclick="return false">
-        <input type="checkbox" ${selected.has(s.username) ? 'checked' : ''} style="pointer-events:none" />
-        <span>
-          <strong>${escapeHtml(s.username)}</strong>
-          <span class="log-sub">${escapeHtml(s.region || '-')} · ${escapeHtml(s.branch || '-')} · ${escapeHtml(s.department || '-')}</span>
-        </span>
-      </label>
-    </div>`).join('');
+    <button type="button" class="staff-search-item" aria-pressed="${selected.has(s.username)}"
+            data-staff-username="${escapeHtml(s.username).replace(/"/g, '&quot;')}"
+            onclick="toggleRejectCandidate(${requestId}, this.dataset.staffUsername)">
+      <span class="staff-choice-indicator" aria-hidden="true">${selected.has(s.username) ? '✓' : ''}</span>
+      <span class="staff-choice-content">
+        <strong>${escapeHtml(s.username)}</strong>
+        <span class="log-sub">${escapeHtml(s.region || '-')} · ${escapeHtml(s.branch || '-')} · ${escapeHtml(s.department || '-')}</span>
+      </span>
+    </button>`).join('');
 }
 
 function toggleRejectCandidate(requestId, username) {
+  const results = document.getElementById(`staff-results-${requestId}`);
+  const restoreFocus = results && results.contains(document.activeElement);
   const selections = window._rejectSelections[requestId] || new Set();
   if (selections.has(username)) {
     selections.delete(username);
@@ -300,6 +303,11 @@ function toggleRejectCandidate(requestId, username) {
 
   const input = document.querySelector(`.staff-search-input[data-request-id="${requestId}"][data-mode="reject"]`);
   renderRejectSearchResults(requestId, input ? input.value : '');
+  if (restoreFocus) {
+    const selectedButton = Array.from(results.querySelectorAll('button[data-staff-username]'))
+      .find(button => button.dataset.staffUsername === username);
+    if (selectedButton) selectedButton.focus();
+  }
 }
 
 async function submitReject(requestId) {
@@ -368,12 +376,12 @@ function renderRecommendations(requestId, names, reason) {
   if (!names.length) {
     box.innerHTML = `<div class="log-sub">예시 결과 파일에서 유효한 업무담당자를 찾지 못했습니다.</div>`;
   } else {
-    const primary = `<button class="rank-primary" onclick="assignRequestTo(${requestId}, '${names[0]}')">
+    const primary = `<button type="button" class="rank-primary" onclick="assignRequestTo(${requestId}, '${names[0]}')">
       <span><span class="rank-badge">1순위</span>${names[0]}</span><span>→</span>
     </button>`;
     const rest = names.slice(1, 3);
     const secondaryRow = rest.length ? `<div class="rank-secondary-row">${rest.map((name, i) =>
-      `<button class="rank-secondary" onclick="assignRequestTo(${requestId}, '${name}')">
+      `<button type="button" class="rank-secondary" onclick="assignRequestTo(${requestId}, '${name}')">
         <span class="rank-badge">${i + 2}순위</span>${name}
       </button>`
     ).join('')}</div>` : '';
@@ -387,8 +395,8 @@ function renderNoResult(requestId, message) {
   const box = document.getElementById(`ai-result-${requestId}`);
   if (!box) return;
   box.innerHTML = `
-    <div class="log-sub" style="margin-bottom:8px">${message || 'AI 판단 예시가 아직 준비되지 않았습니다.'}</div>
-    <button class="btn-toggle" onclick="generateRecommendation(${requestId})">⚙ AI로 생성하기</button>
+    <div class="log-sub recommendation-message">${message || 'AI 판단 예시가 아직 준비되지 않았습니다.'}</div>
+    <button type="button" class="btn-toggle" onclick="generateRecommendation(${requestId})">⚙ AI로 생성하기</button>
   `;
   box.style.display = 'block';
 }

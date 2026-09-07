@@ -11,14 +11,14 @@
     <div class="notice">나에게 배정된 청구만 표시됩니다.</div>
     {% endif %}
     <form class="filter-form" method="get">
-        <input type="text" name="q" placeholder="청구인 · 요청대상 · 내용 검색" value="{{ filters.q }}" />
-        <select name="status">
+        <input type="text" name="q" aria-label="청구인, 요청대상 또는 내용 검색" placeholder="청구인 · 요청대상 · 내용 검색" value="{{ filters.q }}" />
+        <select name="status" aria-label="처리 상태">
             <option value="">전체 상태</option>
             {% for value in ['접수', '판단중', '완료'] %}
             <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ value }}</option>
             {% endfor %}
         </select>
-        <select name="notice_type">
+        <select name="notice_type" aria-label="통지 유형">
             <option value="">전체 통지 유형</option>
             {% for key, label in notice_labels.items() %}
             <option value="{{ key }}" {% if filters.notice_type == key %}selected{% endif %}>{{ label }}</option>

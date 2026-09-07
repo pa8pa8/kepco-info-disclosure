@@ -24,9 +24,9 @@
                 <div class="dispatch-target">{{ r['request_target'] or '요청대상 식별 중' }}</div>
                 <div class="dispatch-label">청구 원문</div>
                 <pre class="result-box raw-text-box">{{ r['raw_text'] }}</pre>
-                <div style="margin-top:12px">
+                <div class="action-row content-gap">
                     <a href="/requests/{{ r['id'] }}" class="link-more">청구 상세 보기 →</a>
-                    <a href="/requester-history?name={{ r['requester_name'] | urlencode }}" class="link-more" style="margin-left:14px">이 청구인 이력 보기 →</a>
+                    <a href="/requester-history?name={{ r['requester_name'] | urlencode }}" class="link-more">이 청구인 이력 보기 →</a>
                 </div>
             </div>
             <div class="dispatch-assign">
@@ -56,12 +56,12 @@
                 </div>
                 {% if not ai %}
                 <div class="assign-panel-hint">추천 담당자를 확인하려면 아래 버튼을 눌러주세요.</div>
-                <button class="btn-toggle" style="width:100%;text-align:center;padding:11px;font-size:13px"
+                <button type="button" class="btn-toggle btn-full"
                         onclick="recommendStaff({{ r['id'] }}, this)" {% if not staff_directory %}disabled{% endif %}>🤖 AI 판단하기</button>
                 {% endif %}
-                <div class="dispatch-label" style="margin-top:16px">담당자 검색</div>
+                <div class="dispatch-label content-gap">담당자 검색</div>
                 <div class="staff-search-wrap">
-                    <input type="text" class="staff-search-input" data-request-id="{{ r['id'] }}"
+                    <input type="text" class="staff-search-input" data-request-id="{{ r['id'] }}" aria-label="청구 #{{ r['id'] }} 담당자 검색"
                            oninput="filterStaffSearch({{ r['id'] }})"
                            placeholder="이름·지역본부·지사·부서로 검색" {% if not staff_directory %}disabled{% endif %} />
                     <div id="staff-results-{{ r['id'] }}" class="staff-search-results"></div>
@@ -78,7 +78,7 @@
     </div>
 </div>
 
-<div class="panel" style="margin-top:18px">
+<div class="panel section-gap">
     <div class="panel-header"><h2>최근 배정 이력</h2></div>
     <div class="list-scroll">
         <table class="table compact">
@@ -88,7 +88,7 @@
                 <tr>
                     <td><a href="/requests/{{ r['id'] }}">#{{ r['id'] }} {{ r['requester_name'] }}</a></td>
                     <td>{{ r['assigned_to'] }}</td>
-                    <td style="font-size:12px;color:var(--muted)">{{ r['assigned_at'] }}</td>
+                    <td class="text-muted">{{ r['assigned_at'] }}</td>
                     <td>
                         {% if r['final_notice_type'] %}
                         <span class="status-pill normal">완료</span>

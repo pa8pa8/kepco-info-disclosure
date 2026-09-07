@@ -27,12 +27,12 @@
                     <tr>
                         <td class="col-name"><strong>{{ u['username'] }}</strong>{% if u['username'] == request.state.auth_user %} <span class="badge">나</span>{% endif %}</td>
                         <td class="col-pill"><span class="status-pill info">{{ u['role'] }}</span></td>
-                        <td class="col-target" style="font-size:12px;color:var(--muted)">
+                        <td class="col-target text-muted">
                             {% if u['region'] or u['branch'] or u['department'] %}
                             {{ u['region'] or '-' }} · {{ u['branch'] or '-' }} · {{ u['department'] or '-' }}
                             {% else %}-{% endif %}
                         </td>
-                        <td class="col-time" style="font-size:12px;color:var(--muted)">{{ u['created_at'] }}</td>
+                        <td class="col-time text-muted">{{ u['created_at'] }}</td>
                         <td class="col-action-wide">
                             <a href="/admin/users/{{ u['id'] }}/edit" class="btn-toggle">수정</a>
                             {% if u['username'] != request.state.auth_user %}
@@ -58,7 +58,7 @@
             <label>아이디
                 <input type="text" name="username" required minlength="3" autofocus />
             </label>
-            <label>비밀번호 <span style="color:var(--muted);font-weight:400">— 8자 이상</span>
+            <label>비밀번호 <span class="field-help">— 8자 이상</span>
                 <input type="password" name="password" required minlength="8" autocomplete="new-password" />
             </label>
             <label>역할
@@ -68,7 +68,7 @@
                     {% endfor %}
                 </select>
             </label>
-            <label>1차사업소(지역본부) <span style="color:var(--muted);font-weight:400">— 업무담당자만 해당</span>
+            <label>1차사업소(지역본부) <span class="field-help">— 업무담당자만 해당</span>
                 <input type="text" name="region" placeholder="예: 서울지역본부" />
             </label>
             <label>2차사업소(지사)
@@ -79,7 +79,7 @@
             </label>
             <button class="btn-primary" type="submit">계정 생성</button>
         </form>
-        <div class="notice" style="margin-top:14px">
+        <div class="notice content-gap">
             <strong>역할별 화면</strong><br>
             시스템관리자 → 계정 관리 · 총괄관리자 → 대시보드/청구 전체/설정 ·
             배정담당자 → 배정 대기 · 업무담당자 → 내 업무(배정받은 건만)

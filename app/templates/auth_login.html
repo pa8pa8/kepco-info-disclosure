@@ -5,15 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ title }}</title>
     <link rel="stylesheet" href="/static/css/style.css?v=1" />
+    <link rel="stylesheet" href="/static/css/krds.css?v=1" />
 </head>
 <body class="auth-body">
     <main class="auth-page">
         <section class="auth-card">
-            <div class="auth-brand">정보공개 <span>청구지원</span></div>
+            <div class="auth-brand"><span class="brand-institution">한국전력공사</span>정보공개 <span>청구지원</span></div>
             <h1>로그인</h1>
             <p>정보공개 청구 지원 시스템을 사용하려면 로그인해주세요.</p>
             {% if error %}
-            <div class="auth-error">{{ error }}</div>
+            <div class="auth-error" role="alert">{{ error }}</div>
             {% endif %}
             <form method="post" action="/login" class="auth-form">
                 <input type="hidden" name="next" value="{{ next or '/' }}" />

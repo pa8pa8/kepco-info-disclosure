@@ -197,10 +197,18 @@ pytest
 전역 토큰 변경이라 다른 화면들도 같은 라이트 테마를 공유합니다. 상세는
 `logs/changes/2026-09-07/FOIA-0004-krds.md` 참고.
 
+2026-09-08(FOIA-0022)에는 공식 KRDS 색상 토큰과 Pretendard GOV 서체를 기반으로
+공통 메뉴·버튼·입력창·표·배지·배정 카드를 정리했습니다. 실제 적용 스타일은
+`app/static/css/krds.css`이며 기존 `style.css` 다음에 불러옵니다. 서체는 프로젝트에
+포함되어 외부 CDN 연결 없이 동작합니다. 좁은 화면에서도 업무 메뉴를 사용할 수 있고,
+담당자 검색 결과와 재배정 후보를 키보드로 선택할 수 있습니다. 적용 범위와 검증 화면은
+[`docs/design/README.md`](docs/design/README.md)에 있습니다.
+
 Codex에서 Figma를 직접 사용하는 개발 환경은 사용자 범위 MCP 설정에
 `https://mcp.figma.com/mcp`를 등록하고 OAuth 인증을 진행합니다. 이 PC에서는
-2026-09-07 연결 등록과 로그인을 확인했습니다. 캔버스 직접 편집 권한은 별도 확인이
-필요하며, 이 연결은 애플리케이션 실행 의존성이 아닙니다. 연결 기록은
+2026-09-07 연결 등록과 로그인, 대상 페이지·KRDS 버튼 조회를 확인했습니다. 후속 Figma
+조회는 Codex 사용량 한도로 자동 승인 검토에서 거절되어 캔버스 작성은 완료하지
+못했습니다. 이 연결은 애플리케이션 실행 의존성이 아닙니다. 연결 기록은
 `logs/changes/2026-09-07/FOIA-0003-connect-codex-to-figma-mcp.md`에 있습니다.
 
 ## 문서 생성 도구 (`tools/`)
@@ -237,7 +245,7 @@ pyinstaller --onefile --name INFO_DISCLOSURE_System --add-data "app\templates;ap
   `docs/PROJECT_REVIEW.md` 참고.
 
 ## SCADA 프로젝트와의 관계
-디자인 토큰(색상/폰트), 코드 구조, 인증 방식(pbkdf2 + HMAC 세션 쿠키)을 `scada_system_agent`
-프로젝트와 동일하게 재사용해 UX 일관성을 유지했습니다. 기능적으로는 서로 무관한 별개
+초기 디자인과 코드 구조, 인증 방식(pbkdf2 + HMAC 세션 쿠키)을 `scada_system_agent`
+프로젝트에서 재사용했습니다. 현재 웹 화면의 색상·서체는 KRDS 기준으로 변경했습니다. 기능적으로는 서로 무관한 별개
 프로젝트입니다. `docs/reference/scada_aiops_blueprint.html`은 SCADA 프로젝트의 기술 청사진을
 UX 참고용으로 복사해 둔 것으로, 이 프로젝트 자체의 문서가 아닙니다.

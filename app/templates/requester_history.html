@@ -8,8 +8,8 @@
         청구인 이름이 정확히 일치하는 과거 청구만 조회됩니다. 전체 청구 목록 검색은 지원하지
         않습니다 — 배정 시 반복 청구 여부를 참고하기 위한 용도입니다.
     </div>
-    <form class="filter-form" method="get" style="grid-template-columns: 2fr auto">
-        <input type="text" name="name" placeholder="청구인 이름 (정확히 입력)" value="{{ query_name }}" autofocus />
+    <form class="filter-form filter-form-single" method="get">
+        <input type="text" name="name" aria-label="청구인 이름 (정확히 입력)" placeholder="청구인 이름 (정확히 입력)" value="{{ query_name }}" autofocus />
         <button class="btn-primary" type="submit">조회</button>
     </form>
 

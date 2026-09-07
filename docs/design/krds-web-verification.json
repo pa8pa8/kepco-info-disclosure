@@ -1,0 +1,205 @@
+{
+  "pages": [
+    {
+      "name": "login",
+      "width": 1440,
+      "scroll": 1440,
+      "font": "\"Pretendard GOV\", \"Malgun Gothic\", \"Segoe UI\", sans-serif",
+      "size": "17px",
+      "fontsLoaded": true
+    },
+    {
+      "name": "dispatch-desktop",
+      "width": 1440,
+      "scroll": 1440,
+      "font": "\"Pretendard GOV\", \"Malgun Gothic\", \"Segoe UI\", sans-serif",
+      "size": "17px",
+      "fontsLoaded": true
+    },
+    {
+      "name": "dispatch-1024",
+      "width": 1024,
+      "scroll": 1024,
+      "font": "\"Pretendard GOV\", \"Malgun Gothic\", \"Segoe UI\", sans-serif",
+      "size": "17px",
+      "fontsLoaded": true
+    },
+    {
+      "name": "dispatch-768",
+      "width": 768,
+      "scroll": 768,
+      "font": "\"Pretendard GOV\", \"Malgun Gothic\", \"Segoe UI\", sans-serif",
+      "size": "17px",
+      "fontsLoaded": true
+    },
+    {
+      "name": "dispatch-390",
+      "width": 390,
+      "scroll": 390,
+      "font": "\"Pretendard GOV\", \"Malgun Gothic\", \"Segoe UI\", sans-serif",
+      "size": "17px",
+      "fontsLoaded": true
+    },
+    {
+      "name": "requester-history",
+      "width": 1440,
+      "scroll": 1440,
+      "font": "\"Pretendard GOV\", \"Malgun Gothic\", \"Segoe UI\", sans-serif",
+      "size": "17px",
+      "fontsLoaded": true
+    },
+    {
+      "name": "detail-dispatcher",
+      "width": 1440,
+      "scroll": 1440,
+      "font": "\"Pretendard GOV\", \"Malgun Gothic\", \"Segoe UI\", sans-serif",
+      "size": "17px",
+      "fontsLoaded": true
+    },
+    {
+      "name": "assign-keyboard",
+      "width": 1440,
+      "scroll": 1440,
+      "font": "\"Pretendard GOV\", \"Malgun Gothic\", \"Segoe UI\", sans-serif",
+      "size": "17px",
+      "fontsLoaded": true
+    },
+    {
+      "name": "my-queue",
+      "width": 1440,
+      "scroll": 1440,
+      "font": "\"Pretendard GOV\", \"Malgun Gothic\", \"Segoe UI\", sans-serif",
+      "size": "17px",
+      "fontsLoaded": true
+    },
+    {
+      "name": "detail-staff",
+      "width": 1440,
+      "scroll": 1440,
+      "font": "\"Pretendard GOV\", \"Malgun Gothic\", \"Segoe UI\", sans-serif",
+      "size": "17px",
+      "fontsLoaded": true
+    },
+    {
+      "name": "dashboard",
+      "width": 1440,
+      "scroll": 1440,
+      "font": "\"Pretendard GOV\", \"Malgun Gothic\", \"Segoe UI\", sans-serif",
+      "size": "17px",
+      "fontsLoaded": true
+    },
+    {
+      "name": "dashboard-390",
+      "width": 390,
+      "scroll": 390,
+      "font": "\"Pretendard GOV\", \"Malgun Gothic\", \"Segoe UI\", sans-serif",
+      "size": "17px",
+      "fontsLoaded": true
+    },
+    {
+      "name": "requests",
+      "width": 1440,
+      "scroll": 1440,
+      "font": "\"Pretendard GOV\", \"Malgun Gothic\", \"Segoe UI\", sans-serif",
+      "size": "17px",
+      "fontsLoaded": true
+    },
+    {
+      "name": "requests-390",
+      "width": 390,
+      "scroll": 390,
+      "font": "\"Pretendard GOV\", \"Malgun Gothic\", \"Segoe UI\", sans-serif",
+      "size": "17px",
+      "fontsLoaded": true
+    },
+    {
+      "name": "settings",
+      "width": 1440,
+      "scroll": 1440,
+      "font": "\"Pretendard GOV\", \"Malgun Gothic\", \"Segoe UI\", sans-serif",
+      "size": "17px",
+      "fontsLoaded": true
+    },
+    {
+      "name": "settings-390",
+      "width": 390,
+      "scroll": 390,
+      "font": "\"Pretendard GOV\", \"Malgun Gothic\", \"Segoe UI\", sans-serif",
+      "size": "17px",
+      "fontsLoaded": true
+    },
+    {
+      "name": "detail-manager",
+      "width": 1440,
+      "scroll": 1440,
+      "font": "\"Pretendard GOV\", \"Malgun Gothic\", \"Segoe UI\", sans-serif",
+      "size": "17px",
+      "fontsLoaded": true
+    },
+    {
+      "name": "detail-manager-390",
+      "width": 390,
+      "scroll": 390,
+      "font": "\"Pretendard GOV\", \"Malgun Gothic\", \"Segoe UI\", sans-serif",
+      "size": "17px",
+      "fontsLoaded": true
+    },
+    {
+      "name": "notice",
+      "width": 1440,
+      "scroll": 1440,
+      "font": "\"Pretendard GOV\", \"Malgun Gothic\", \"Segoe UI\", sans-serif",
+      "size": "17px",
+      "fontsLoaded": true
+    },
+    {
+      "name": "admin-1440",
+      "width": 1440,
+      "scroll": 1440,
+      "font": "\"Pretendard GOV\", \"Malgun Gothic\", \"Segoe UI\", sans-serif",
+      "size": "17px",
+      "fontsLoaded": true
+    },
+    {
+      "name": "admin-390",
+      "width": 390,
+      "scroll": 390,
+      "font": "\"Pretendard GOV\", \"Malgun Gothic\", \"Segoe UI\", sans-serif",
+      "size": "17px",
+      "fontsLoaded": true
+    }
+  ],
+  "browser_errors": [],
+  "asset_errors": [],
+  "disabled_input_style": true,
+  "keyboard_assignment": true,
+  "keyboard_candidate_selection_limit_and_focus": true,
+  "summary_label_contrast": [
+    {
+      "label": "✔ 공개",
+      "contrast": 5.262584559307825
+    },
+    {
+      "label": "◐ 부분공개",
+      "contrast": 5.287293873089351
+    },
+    {
+      "label": "✖ 비공개",
+      "contrast": 5.3057789146457734
+    },
+    {
+      "label": "❓ 정보부존재",
+      "contrast": 5.287293873089351
+    },
+    {
+      "label": "📩 진정·질의",
+      "contrast": 6.085771843217818
+    },
+    {
+      "label": "⏹ 종결",
+      "contrast": 7.952682882885745
+    }
+  ],
+  "print_toolbar_hidden_and_sheet_borderless": true,
+  "project_data_unchanged": true
+}

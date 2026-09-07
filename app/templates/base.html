@@ -5,12 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ title }}</title>
     <link rel="stylesheet" href="/static/css/style.css?v=1" />
+    <link rel="stylesheet" href="/static/css/krds.css?v=1" />
 </head>
 <body>
+    <a class="skip-link" href="#main-content">본문 바로가기</a>
     <div class="shell">
         <aside class="sidebar">
-            <div class="brand">정보공개<br><span>청구지원</span></div>
-            <nav id="main-nav">
+            <div class="brand"><span class="brand-institution">한국전력공사</span>정보공개<br><span>청구지원</span></div>
+            <div class="nav-heading">업무 메뉴</div>
+            <nav id="main-nav" aria-label="업무 메뉴">
                 {% if request.state.auth_role == '총괄관리자' %}
                 <a href="/" class="nav-link">대시보드</a>
                 <a href="/requests" class="nav-link">청구 목록</a>
@@ -26,10 +29,18 @@
             </nav>
             <div class="sidebar-footer">© 2026 한국전력공사</div>
         </aside>
-        <main class="content">
+        <main class="content" id="main-content" tabindex="-1">
             <header class="topbar">
                 <div>
-                    <h1>{{ title }}</h1>
+                    <div class="page-kicker">정보공개 청구 업무지원</div>
+                    <h1>{% if request.url.path == '/dispatch' %}배정 대기
+                        {% elif request.url.path == '/requester-history' %}청구인 이력 조회
+                        {% elif request.url.path == '/requests' %}{{ '내 업무' if request.state.auth_role == '업무담당자' else '청구 목록' }}
+                        {% elif request.url.path.startswith('/requests/') %}청구 상세
+                        {% elif request.url.path == '/settings' %}설정
+                        {% elif request.url.path == '/admin/users' %}계정 관리
+                        {% elif request.url.path.startswith('/admin/users/') %}계정 수정
+                        {% else %}대시보드{% endif %}</h1>
                     <p class="subtitle">
                         {% if request.state.auth_role == '시스템관리자' %}계정 추가·삭제 관리
                         {% elif request.state.auth_role == '배정담당자' %}접수된 청구를 업무담당자에게 배정
@@ -51,13 +62,16 @@
         </main>
     </div>
 
-    <script src="/static/js/app.js?v=1"></script>
+    <script src="/static/js/app.js?v=2"></script>
     <script>
     (function(){
       const path = location.pathname;
       document.querySelectorAll('#main-nav .nav-link').forEach(a => {
         const href = a.getAttribute('href');
-        if (href === '/' ? path === '/' : path.startsWith(href)) a.classList.add('active');
+        if (href === '/' ? path === '/' : path.startsWith(href)) {
+          a.classList.add('active');
+          a.setAttribute('aria-current', 'page');
+        }
       });
     })();
     </script>

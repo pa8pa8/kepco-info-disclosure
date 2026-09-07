@@ -9,7 +9,7 @@
 | `DEPLOYMENT.md` | 로컬 1인 실행이 아니라 여러 사용자가 접속하는 서버로 올릴 때 필요한 절차(리버스 프록시·TLS·시크릿·DB 보호) | 로컬 개발 실행 방법(루트 `README.md` "개발용 실행" 참고) |
 | `PROJECT_REVIEW.md` | 특정 시점 코드 점검 결과·발견한 리스크·우선순위별 개선 계획(진행형 문서, 계속 갱신됨) | 완료된 기능의 사용 방법(루트 `README.md` 참고), 개별 변경의 상세 근거(`logs/changes/` 참고) |
 | `blueprint.jpeg` / `blueprint.html` | 정보공개법 판단 흐름 원본 도표 — `app/services/foia_core.py`가 이걸 그대로 코드화 | 화면 UI |
-| `design/` | Figma로 가져갈 수 있는 KRDS 디자인 시안(SVG/PNG) — 반영 상태는 각 폴더 README 참고 | 실제 구현 코드 |
+| `design/` | KRDS 적용 범위·공식 출처·실제 화면 검증 캡처와 초기 Figma용 시안 — `design/README.md` 참고 | 실제 구현 코드 |
 | `reference/` | 다른 프로젝트(SCADA) 문서를 UX 참고용으로 복사해 둔 자료 — **이 프로젝트 자체의 문서 아님** | — |
 
 루트의 `README.md`(기능 요약·실행 방법)와 `CHANGELOG.md`(버전별 변경 이력)가 우선이고,
