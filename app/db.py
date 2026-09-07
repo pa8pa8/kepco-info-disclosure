@@ -467,8 +467,13 @@ class Database:
     def get_decision_log(self, request_id: int):
         return self.fetch_all('SELECT * FROM decision_log WHERE request_id = ? ORDER BY created_at ASC', (request_id,))
 
-    def get_log_source_files(self, limit: int = 500):
-        rows = self.fetch_all('SELECT source_file FROM disclosure_requests WHERE source_file IS NOT NULL LIMIT ?', (limit,))
+    def get_log_source_files(self):
+        """감시 폴더 재스캔 시 "이미 접수된 파일"을 판별하는 데 쓴다. `LIMIT` +
+        `ORDER BY` 없이 상한을 두면, 누적 청구가 그 상한을 넘는 순간부터 오래된
+        source_file 일부가 결과에서 빠져 중복 접수될 수 있다(발견: FOIA-0032) —
+        전체를 다 가져와야 한다. 파일명 문자열 하나만 담는 열이라 수만 건이 쌓여도
+        가벼운 조회다."""
+        rows = self.fetch_all('SELECT source_file FROM disclosure_requests WHERE source_file IS NOT NULL')
         return {row['source_file'] for row in rows}
 
     def summary(self) -> dict[str, Any]:

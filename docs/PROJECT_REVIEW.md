@@ -20,7 +20,9 @@ README의 "알려진 제약사항"에 없는 리스크와 개선 항목**을 다
 - 비밀번호는 pbkdf2_sha256 260,000회 해싱, 세션은 HMAC 서명 + `httponly` + `SameSite=Strict`
   쿠키로 구현되어 있어 기본기가 탄탄함
 - 모든 SQL이 파라미터 바인딩(`?`)을 사용 — SQL 인젝션 경로 없음
-- Jinja2 템플릿 어디에도 `|safe` 필터가 없어 자동 이스케이프가 항상 적용됨(XSS 안전)
+- Jinja2 템플릿 어디에도 `|safe` 필터가 없어 서버 렌더링 화면은 자동 이스케이프가
+  항상 적용됨(XSS 안전). 단, 클라이언트 JS가 `.innerHTML`로 직접 그리는 대시보드
+  목록은 별도 이슈였음 — 아래 표 참고(FOIA-0032에서 수정)
 - 배정/판단 단계 전이에 서버사이드 상태 검증이 되어 있음 (이미 배정된 건 재배정 불가,
   현재 단계와 다른 step 요청 거부, 이미 완료된 건 재판단 불가 등)
 - 변경 로그(`logs/changes/`)와 `CHANGELOG.md`가 실제로 매 작업마다 갱신되고 있어 추적 가능성이 높음
@@ -40,6 +42,8 @@ README의 "알려진 제약사항"에 없는 리스크와 개선 항목**을 다
 | 중간 (수정 완료) | 입력 길이 제한 없음 | 청구인 성명·연락처·청구 원문(`raw_text`)에 최대 길이 검증이 전혀 없어, 실수로 매우 큰 텍스트를 붙여넣어도 그대로 DB에 저장됨 → `/requests/new`는 FastAPI `Form(max_length=...)`로 즉시 거부(성명 100자/연락처 200자/원문 20,000자), 감시 폴더 자동 접수 경로(`RequestProcessorService.ingest`)에도 동일 상한으로 자르는 로직 추가 |
 | 낮음 | 외부 노출 자체는 기본값이 안전하나 배포 가이드 부재 | `launcher.py`가 `host='127.0.0.1'`로만 바인딩하고 CORS 미들웨어도 없어 기본 자세는 안전함. 다만 실제로 여러 사용자가 접속하는 서버로 올릴 때 필요한 리버스 프록시·TLS 종료·`FOIA_AUTH_COOKIE_SECURE` 설정 방법이 문서화되어 있지 않았음 → `docs/DEPLOYMENT.md` 신규 작성 |
 | 낮음 | 연락처 형식 검증 없음 | `requester_contact`가 자유 문자열이라 전화번호/이메일 형식 여부를 서버가 확인하지 않음(치명적 보안 이슈는 아니고 데이터 품질 문제) — 아직 미해결 |
+| 높음 (수정 완료) | 대시보드 클라이언트 렌더링에 저장형 XSS | `app/static/js/app.js`의 `renderPendingList`/`renderRecentList`/`renderRecommendations`가 청구인이 실제로 입력하는 `requester_name`/`request_target`(AI가 원문에서 그대로 추출)을 이스케이프 없이 `.innerHTML`로 그렸음 — 악의적인 청구 원문 하나로 총괄관리자 대시보드에서 임의 스크립트 실행 가능. Jinja2 서버 렌더링은 자동 이스케이프로 안전했지만 이 경로는 클라이언트 JS라 별개였음 → `escapeHtml()`로 전부 감쌈(FOIA-0032). `<img src=x onerror=...>` 페이로드로 직접 재현·수정 확인 |
+| 중간 (수정 완료) | 감시 폴더 재스캔이 500건 넘으면 중복 접수 가능 | `db.get_log_source_files()`가 `ORDER BY` 없이 `LIMIT 500`을 걸어, 누적 청구가 500건을 넘으면 오래된 파일 일부가 "이미 접수됨" 목록에서 빠져 재스캔 시 중복 접수될 수 있었음(합성 테스트로 재현: 520건 중 최근 파일이 누락됨 확인) → `LIMIT` 제거, 회귀 테스트 추가(FOIA-0032) |
 
 ## 3. 이번 점검에서 즉시 수정한 것
 - `app/templates/admin_users.html`: 계정 추가 폼의 비밀번호 입력 필드를 `type="text"` →
@@ -121,6 +125,22 @@ README의 "알려진 제약사항"에 없는 리스크와 개선 항목**을 다
     '${name}')"`). 지금은 이름이 항상 `staffN` 패턴이라 위험은 없지만, FOIA-0022에서
     담당자 검색 결과만 더 안전한 `data-*` 속성 + `escapeHtml` 방식으로 바꿔놓은 것과
     일관성이 안 맞음 — 통일 검토.
+
+### 그 외 전체 점검에서 발견, 보류 (사용자 지시, 2026-09-08, FOIA-0032)
+16. `app/db.py`의 `assign_request`/`reassign_request`/`extend_deadline`/
+    `reject_and_nominate`/`finalize_notice`가 관련된 두 SQL 문(상태 변경 UPDATE +
+    `decision_log` INSERT)을 각각 별도의 `self.execute()`(= 별도 커넥션·트랜잭션)로
+    실행한다. `apply_step_answer`는 이미 `with self.connect()` 블록 하나로 두 문장을
+    묶어 원자적으로 처리하는데, 나머지 메서드들은 그렇지 않다 — 두 문장 사이에 프로세스가
+    죽으면(정전 등) 상태는 바뀌었는데 이력 로그는 안 남는 식의 불일치가 생길 수 있다.
+    SQLite 커밋이 워낙 빨라 발생 확률은 낮지만, `apply_step_answer`와 같은 패턴으로
+    통일하는 게 안전하다.
+17. 대시보드 "판단 대기" 목록(`renderPendingList`, `app/static/js/app.js`)이 "현재 단계"에
+    `request_decisions.current_step`의 영문 키(`repeat`/`information` 등)를 그대로
+    보여준다 — 다른 화면(`판단 경로`, `처리 이력`)은 전부 `app/db.py`의 `STEP_LABELS`로
+    한글 라벨("반복 청구 대상인가?" 등)을 붙여 보여주는 것과 다르다. `/api/requests`
+    응답에 라벨을 추가하거나 프런트에서 매핑하도록 통일 필요(사소한 표시 문제, 기능
+    영향 없음).
 
 ## 5. 참고
 - 개발 서버가 이전 세션부터 `http://127.0.0.1:8000`에서 계속 실행 중입니다. 이 점검·문서화

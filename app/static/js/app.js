@@ -70,10 +70,10 @@ function renderPendingList(rows) {
         <div class="log-time">${r.received_at || '-'}</div>
         <div class="log-server">#${r.id}</div>
         <div class="log-message">
-          <div class="log-summary">${r.requester_name} · ${r.request_target || '식별 중'}
+          <div class="log-summary">${escapeHtml(r.requester_name)} · ${escapeHtml(r.request_target || '식별 중')}
             ${r.deadline ? `<span class="status-pill ${r.deadline.tone} deadline-inline" title="${escapeHtml(r.deadline.label)}">${escapeHtml(r.deadline.short_label)}</span>` : ''}
           </div>
-          <div class="log-sub">현재 단계: ${r.current_step || '-'}</div>
+          <div class="log-sub">현재 단계: ${escapeHtml(r.current_step || '-')}</div>
         </div>
       </div>
     </a>`).join('');
@@ -89,10 +89,10 @@ function renderRecentList(rows) {
   root.innerHTML = rows.slice(0, 10).map(r => `
     <div class="ai-guide-card">
       <div class="ai-guide-head">
-        <strong>#${r.id} ${r.requester_name}</strong>
+        <strong>#${r.id} ${escapeHtml(r.requester_name)}</strong>
         ${noticePill(r.final_notice_type)}
       </div>
-      <div class="ai-guide-summary">${r.request_target || '요청대상 식별 중'}</div>
+      <div class="ai-guide-summary">${escapeHtml(r.request_target || '요청대상 식별 중')}</div>
       <div class="log-sub">${r.received_at || '-'}</div>
     </div>`).join('');
 }
@@ -382,15 +382,15 @@ function renderRecommendations(requestId, names, reason) {
     box.innerHTML = `<div class="log-sub">예시 결과 파일에서 유효한 업무담당자를 찾지 못했습니다.</div>`;
   } else {
     const primary = `<button type="button" class="rank-primary" onclick="assignRequestTo(${requestId}, '${names[0]}')">
-      <span><span class="rank-badge">1순위</span>${names[0]}</span><span>→</span>
+      <span><span class="rank-badge">1순위</span>${escapeHtml(names[0])}</span><span>→</span>
     </button>`;
     const rest = names.slice(1, 3);
     const secondaryRow = rest.length ? `<div class="rank-secondary-row">${rest.map((name, i) =>
       `<button type="button" class="rank-secondary" onclick="assignRequestTo(${requestId}, '${name}')">
-        <span class="rank-badge">${i + 2}순위</span>${name}
+        <span class="rank-badge">${i + 2}순위</span>${escapeHtml(name)}
       </button>`
     ).join('')}</div>` : '';
-    const reasonHtml = reason ? `<div class="assign-reason">추천 사유: ${reason}</div>` : '';
+    const reasonHtml = reason ? `<div class="assign-reason">추천 사유: ${escapeHtml(reason)}</div>` : '';
     box.innerHTML = `<div class="assign-panel-hint">추천 담당자를 선택하면 바로 배정됩니다.</div>${primary}${secondaryRow}${reasonHtml}`;
   }
   box.style.display = 'block';
