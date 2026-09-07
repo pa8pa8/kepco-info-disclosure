@@ -303,6 +303,23 @@ class Database:
             (request_id, assigned_to, assigned_by),
         )
 
+    def reassign_request(self, request_id: int, assigned_to: str, assigned_by: str, previous_assignee: str | None):
+        """배정담당자/총괄관리자가 이미 배정된 건을 담당자 동의 없이 직접 재배정한다.
+        `assign_request`(최초 배정)와 달리 이전 담당자 → 새 담당자를 로그에 남긴다."""
+        self.execute(
+            '''UPDATE disclosure_requests
+               SET assigned_to = ?, assigned_by = ?, assigned_at = datetime('now', 'localtime'),
+                   reassign_candidates_json = NULL, updated_at = datetime('now', 'localtime')
+               WHERE id = ?''',
+            (assigned_to, assigned_by, request_id),
+        )
+        answer = f'{previous_assignee} → {assigned_to}' if previous_assignee else assigned_to
+        self.execute(
+            '''INSERT INTO decision_log (request_id, step_key, step_label, answer, article_ref, actor)
+               VALUES (?, 'reassign', '담당자 재배정', ?, NULL, ?)''',
+            (request_id, answer, assigned_by),
+        )
+
     def reject_and_nominate(self, request_id: int, candidates: list[str], actor: str):
         """업무담당자가 잘못 배정된 청구를 거절 — 단순 반려는 없고, 반드시 1~3명의
         재배정 후보를 지명해야 한다. 청구는 다시 미배정 상태가 되어 배정 대기 큐로

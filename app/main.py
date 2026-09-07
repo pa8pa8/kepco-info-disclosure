@@ -477,9 +477,12 @@ async def request_detail(request: Request, request_id: int):
     )
     can_assign = (not is_finalized) and role in ('배정담당자', '총괄관리자') and not row['assigned_to']
     can_reject = (not is_finalized) and role == '업무담당자' and row['assigned_to'] == request.state.auth_user
-    staff_directory = [dict(r) for r in db.list_directory_by_role('업무담당자')] if (can_assign or can_reject) else []
+    can_reassign = (not is_finalized) and role in ('배정담당자', '총괄관리자') and bool(row['assigned_to'])
+    staff_directory = [dict(r) for r in db.list_directory_by_role('업무담당자')] if (can_assign or can_reject or can_reassign) else []
     if can_reject:
         staff_directory = [s for s in staff_directory if s['username'] != request.state.auth_user]
+    elif can_reassign:
+        staff_directory = [s for s in staff_directory if s['username'] != row['assigned_to']]
     ai_result = _load_recommendation(row) if can_assign else None
 
     return templates.TemplateResponse(
@@ -501,6 +504,7 @@ async def request_detail(request: Request, request_id: int):
             'can_decide': can_decide,
             'can_assign': can_assign,
             'can_reject': can_reject,
+            'can_reassign': can_reassign,
             'staff_directory': staff_directory,
             'ai_result': ai_result,
         },
@@ -769,12 +773,18 @@ async def api_assign(request_id: int, request: Request):
     row = db.get_request(request_id)
     if not row:
         return JSONResponse({'success': False, 'message': '청구를 찾을 수 없습니다.'}, status_code=404)
-    if row['assigned_to']:
-        return JSONResponse({'success': False, 'message': '이미 배정된 청구입니다.'}, status_code=409)
     decision = db.get_decision(request_id)
     if decision and decision['final_notice_type']:
         return JSONResponse({'success': False, 'message': '이미 처리가 완료된 청구는 배정할 수 없습니다.'}, status_code=409)
-    db.assign_request(request_id, assigned_to, assigned_by=request.state.auth_user)
+    previous_assignee = row['assigned_to']
+    if previous_assignee == assigned_to:
+        return JSONResponse({'success': False, 'message': '이미 해당 담당자에게 배정되어 있습니다.'}, status_code=409)
+    if previous_assignee:
+        # 이미 배정된 건을 배정담당자/총괄관리자가 담당자 동의 없이 직접 재배정하는 경우.
+        # 업무담당자 본인이 거절해 재배정 후보를 지명하는 경로(reject_and_nominate)와는 별개다.
+        db.reassign_request(request_id, assigned_to, assigned_by=request.state.auth_user, previous_assignee=previous_assignee)
+    else:
+        db.assign_request(request_id, assigned_to, assigned_by=request.state.auth_user)
     return JSONResponse({'success': True})
 
 
