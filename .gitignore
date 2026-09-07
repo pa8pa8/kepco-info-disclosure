@@ -4,6 +4,7 @@ __pycache__/
 # 런타임에 생성되는 로컬 상태 (소스 아님)
 data/info_disclosure.db
 data/ai_log.jsonl
+data/dev_server.log
 .installed
 
 # 오래된 백업 zip (app/ 소스와 중복, 최신화되지 않음)

@@ -34,13 +34,16 @@
             <h3>AI 식별 결과</h3>
             <div class="log-sub">요청대상: <strong>{{ item['request_target'] or '식별 중' }}</strong></div>
             <div class="log-sub">요약: {{ item['ai_summary'] or '-' }}</div>
+            {% if not dispatcher_limited_view %}
             {% if hints.get('is_petition_hint') %}
             <div class="log-sub" style="color:var(--warn)">⚠ 진정·질의 가능성 있음 (AI 제안)</div>
             {% endif %}
             {% if hints.get('nondisclosure_keywords_matched') %}
             <div class="log-sub" style="color:var(--danger)">⚠ 비공개 사유 키워드 매칭: {{ hints.get('nondisclosure_keywords_matched') | join(', ') }}</div>
             {% endif %}
+            {% endif %}
         </div>
+        {% if not dispatcher_limited_view %}
         <div class="metric-box">
             <h3>반복 청구 판정</h3>
             {% if decision and decision['is_repeat'] %}
@@ -52,6 +55,7 @@
             <div class="log-sub" style="color:var(--ok)">신규 청구로 판정됨</div>
             {% endif %}
         </div>
+        {% endif %}
     </div>
 
     <div class="panel-header" style="margin-top:20px"><h2>청구 원문</h2></div>
@@ -61,6 +65,10 @@
 <div class="dashboard-grid" style="margin-top:18px">
     <div class="panel">
         <div class="panel-header"><h2>판단 경로</h2></div>
+        {% if dispatcher_limited_view %}
+        <div class="notice">배정담당자는 판단 세부 내용을 열람할 수 없습니다 — 배정 업무에는
+        필요하지 않은 정보입니다.</div>
+        {% else %}
         {% if not trail %}
         <div class="notice">아직 판단이 시작되지 않았습니다.</div>
         {% endif %}
@@ -73,8 +81,9 @@
             </div>
             {% endfor %}
         </div>
+        {% endif %}
 
-        {% if decision and decision['final_notice_type'] %}
+        {% if decision and decision['final_notice_type'] and not dispatcher_limited_view %}
         <div class="panel-header" style="margin-top:18px"><h3>최종 통지</h3></div>
         <div class="ai-guide-card">
             <div class="ai-guide-head">
@@ -85,6 +94,12 @@
             <div style="margin-top:12px">
                 <a href="/requests/{{ item['id'] }}/notice" target="_blank" class="btn-toggle">📄 통지서 보기 / 인쇄</a>
             </div>
+        </div>
+        {% elif decision and decision['final_notice_type'] and dispatcher_limited_view %}
+        <div class="panel-header" style="margin-top:18px"><h3>처리 상태</h3></div>
+        <div class="ai-guide-card">
+            <span class="status-pill {{ notice_tone.get(decision['final_notice_type'], 'unknown') }}">{{ notice_labels.get(decision['final_notice_type']) }}</span>
+            <span class="log-sub">처리가 완료되었습니다. 통지 세부 내용은 배정담당자 권한 밖입니다.</span>
         </div>
         {% elif can_assign %}
         <div class="panel-header" style="margin-top:18px"><h3>담당자 배정</h3></div>
@@ -202,15 +217,15 @@
     <div class="panel">
         <div class="panel-header"><h2>처리 이력</h2></div>
         <div class="list-scroll">
-            <table class="table compact">
-                <thead><tr><th>시각</th><th>단계</th><th>답변</th><th>담당자</th></tr></thead>
+            <table class="table compact table-fixed">
+                <thead><tr><th class="col-time">시각</th><th class="col-target">단계</th><th class="col-name">답변</th><th class="col-name">담당자</th></tr></thead>
                 <tbody>
                     {% for log in log_rows %}
                     <tr>
-                        <td>{{ log['created_at'] }}</td>
-                        <td>{{ log['step_label'] }}</td>
-                        <td>{{ log['answer'] }}</td>
-                        <td>{{ log['actor'] }}</td>
+                        <td class="col-time">{{ log['created_at'] }}</td>
+                        <td class="col-target">{{ log['step_label'] }}</td>
+                        <td class="col-name">{{ log['answer'] }}</td>
+                        <td class="col-name">{{ log['actor'] }}</td>
                     </tr>
                     {% else %}
                     <tr><td colspan="4">이력이 없습니다.</td></tr>

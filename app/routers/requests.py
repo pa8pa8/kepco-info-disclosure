@@ -77,6 +77,14 @@ async def request_detail(request: Request, request_id: int):
     can_assign = (not is_finalized) and role in (roles.DISPATCHER, roles.MANAGER) and not row['assigned_to']
     can_reject = (not is_finalized) and role == roles.STAFF and row['assigned_to'] == request.state.auth_user
     can_reassign = (not is_finalized) and role in (roles.DISPATCHER, roles.MANAGER) and bool(row['assigned_to'])
+    # 배정담당자는 "판단은 불가" 역할이다 — 아직 배정 전(can_assign)이라 배정을 위해
+    # 원문을 봐야 하는 경우를 제외하면, 자신이 관여하지 않은 청구의 판단 세부 내용
+    # (AI 힌트, 반복청구 판정, 판단 경로, 최종 통지문, 처리 이력)까지 볼 이유가 없다.
+    dispatcher_limited_view = role == roles.DISPATCHER and not can_assign
+    if dispatcher_limited_view:
+        # 배정/재배정/거절 이력은 배정담당자 본연의 업무 기록이라 남겨두고,
+        # 법적 판단 단계(반복청구/정보해당/진정질의 등 Y-N 응답)만 가린다.
+        log_rows = [log for log in log_rows if log['step_key'] in ('assign', 'reassign', 'reject')]
     deadline_info = foia_core.compute_deadline_info(row['received_at'], bool(row['deadline_extended']), is_finalized)
     can_extend = can_decide and not row['deadline_extended']
     staff_directory = [dict(r) for r in db.list_directory_by_role(roles.STAFF)] if (can_assign or can_reject or can_reassign) else []
@@ -106,6 +114,7 @@ async def request_detail(request: Request, request_id: int):
             'can_assign': can_assign,
             'can_reject': can_reject,
             'can_reassign': can_reassign,
+            'dispatcher_limited_view': dispatcher_limited_view,
             'deadline_info': deadline_info,
             'can_extend': can_extend,
             'staff_directory': staff_directory,
@@ -119,8 +128,12 @@ async def request_notice(request: Request, request_id: int):
     """인쇄/저장용 통지서 화면. 화면에 텍스트로만 남아있던 `notice_text`를 실제로
     청구인에게 발송할 수 있는 문서 형태로 보여준다 — 브라우저 인쇄(Ctrl+P) → PDF로
     저장하면 그대로 산출물이 된다. 별도 라이브러리(docx/pdf 생성) 없이 구현해
-    "10년 전 서버에서도 최소 의존성으로 동작"이라는 프로젝트 원칙을 지킨다."""
-    guard = require_role(request, roles.MANAGER, roles.DISPATCHER, roles.STAFF)
+    "10년 전 서버에서도 최소 의존성으로 동작"이라는 프로젝트 원칙을 지킨다.
+
+    배정담당자는 제외한다 — "판단은 불가" 역할인데 최종 통지문 전체를 인쇄/저장까지
+    할 수 있는 건 명백히 과도한 권한이다(`/requests/{id}` 상세 화면에서도 통지 내용
+    자체는 안 보여주는 것과 일관)."""
+    guard = require_role(request, roles.MANAGER, roles.STAFF)
     if guard:
         return guard
     role = request.state.auth_role
