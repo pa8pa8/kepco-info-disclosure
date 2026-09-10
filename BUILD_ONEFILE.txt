@@ -11,13 +11,49 @@ venv\Scripts\activate
 pip install -r requirements.txt
 pip install pyinstaller
 
-[onefile 빌드 - 권장]
-pyinstaller --onefile --name INFO_DISCLOSURE_System --add-data "app\templates;app\templates" --add-data "app\static;app\static" --add-data "data;data" launcher.py
+[onefile 빌드]
+pyinstaller --onefile --name INFO_DISCLOSURE_System --hidden-import app.main --hidden-import app.db --hidden-import app.config --hidden-import app.services.ai_client --hidden-import app.services.request_processor --hidden-import app.services.foia_core --hidden-import app.services.local_ai_server --hidden-import app.ai_runtime.api --hidden-import app.ai_runtime.utils_text --collect-all sklearn --hidden-import xgboost --hidden-import xgboost.sklearn --collect-data xgboost --collect-binaries xgboost --add-data "app\templates;app\templates" --add-data "app\static;app\static" --add-data "data\models;data\models" launcher.py
 
 [실행]
 cd dist
 INFO_DISCLOSURE_System.exe
 
-[참고]
-- 그래도 import 관련 오류가 나면 아래 옵션으로 재빌드
-pyinstaller --onefile --name INFO_DISCLOSURE_System --hidden-import app.main --hidden-import app.db --hidden-import app.config --hidden-import app.services.ai_client --hidden-import app.services.request_processor --hidden-import app.ai_runtime.api --add-data "app\templates;app\templates" --add-data "app\static;app\static" --add-data "data;data" launcher.py
+[왜 이렇게 많은 --hidden-import/--collect-*가 필요한가 — 2026-09-10 실제 빌드로 확인]
+PyInstaller는 소스 코드의 import 문을 정적으로 따라가며 뭘 묶을지 정한다. 그런데 아래 3가지는
+어디서도 평범한 `import` 문으로 나타나지 않아 자동으로 못 찾는다:
+- `app.ai_runtime.api`: `local_ai_server.py`가 `uvicorn.Config('app.ai_runtime.api:app', ...)`처럼
+  문자열 경로로 넘긴다 — PyInstaller는 이런 문자열을 해석하지 않는다. 빠지면 onefile exe에서
+  로컬 AI 사이드카 스레드가 `ModuleNotFoundError`로 조용히 죽는다(대시보드 자체는 뜨지만 AI
+  식별 기능이 안 됨).
+- `sklearn`, `xgboost`: `gbm_recommender.py`/`xgboost_recommender.py`는 `joblib.load()`로 학습된
+  모델(피클) 파일만 읽지, `import sklearn`/`import xgboost`를 직접 하지 않는다. 하지만 피클을
+  역직렬화하려면 그 클래스가 정의된 모듈이 그 시점에 import 가능해야 한다 — 안 그러면
+  `No module named 'sklearn.pipeline'`로 실패해 배정 추천 두 엔진이 전부 "학습되지 않음"으로
+  나온다(파일은 정상적으로 번들에 들어있는데도 그렇다). `xgboost`는 추가로 네이티브 DLL
+  (`xgboost/lib/xgboost.dll`)도 필요해서 `--collect-binaries`까지 필요하다. `--collect-all
+  xgboost`(전체)는 쓰면 안 된다 — `xgboost.testing` 서브모듈이 테스트 전용 의존성(hypothesis)을
+  요구해서 빌드 자체가 실패한다.
+- 모델 파일 경로(`app/config.py`의 `GBM_MODEL_PATH`/`XGBOOST_MODEL_PATH`)는 exe 옆
+  쓰기가능 폴더가 아니라 이 빌드가 번들한 읽기전용 리소스 기준으로 잡혀 있다(`RESOURCE_DIR`).
+  일반 실행(venv)에서는 두 경로가 같아서 문제가 안 보인다 — onefile exe로 빌드해야만 드러난다.
+
+[중요: `--add-data "data;data"`로 통째로 묶으면 안 된다]
+`data/` 밑에는 `data/training/raw/`(국정감사 자료요구 원본 hwp/xlsx, 실제 개인정보 포함
+가능)와 `data/training/staff_assignments.csv`(실제 청구인 원문 — 만들어져 있다면)처럼
+`.gitignore`로 커밋만 막아둔 파일들이 있다. `--add-data "data;data"`로 통째로 묶으면 이
+git 보호를 그대로 우회해서 배포용 exe 안에 그 파일들이 그대로 박제된다 — 컴퓨터에 그
+폴더가 남아있는 상태로(정상적인 작업 중 상태) 빌드하면 아무 경고 없이 유출된다. 그래서
+`data` 전체가 아니라 실제로 exe가 읽는 `data\models`만 명시적으로 묶는다. 나중에 exe에
+새로 번들할 파일이 생기면(예: 예시 데이터) 반드시 개별 경로로만 추가하고, 절대
+`data;data`로 되돌리지 말 것.
+
+[검증 방법]
+1. `python -m pytest`가 전부 통과하는 것만으로는 부족하다 — 테스트는 frozen exe를 만들지
+   않으므로 이 절의 문제들을 하나도 못 잡는다. 실제로 위 명령으로 빌드하고 exe를 띄운 뒤,
+   로그인 → 아무 청구나 "AI로 생성하기"를 눌러 GradientBoost/XGBoost 추천이 실제로
+   나오는지 확인해야 한다.
+2. 콘솔에 `[gbm-recommender] failed to load model` / `[xgboost-recommender] failed to load
+   model` / `ModuleNotFoundError`가 찍히면 위 목록의 모듈이 또 빠진 것이다.
+3. `build\INFO_DISCLOSURE_System\Analysis-00.toc`에서 `training` 문자열을 검색해 아무것도
+   안 나오는지 확인한다(`findstr training build\INFO_DISCLOSURE_System\Analysis-00.toc`) —
+   나오면 위 "통째로 묶으면 안 된다" 항목이 다시 깨진 것이다.

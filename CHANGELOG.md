@@ -378,3 +378,51 @@ Claude와 번갈아 작업하는 협업 구조에서 Codex가 진행한 작업. 
   버그. `LIMIT` 제거, 회귀 테스트 추가(520건으로 재현 확인).
 - 나머지 발견 사항(비원자적 다중 SQL 쓰기, 대시보드 판단 단계 영문 키 노출)은
   사용자 지시로 보류 — `docs/PROJECT_REVIEW.md` 16~17번에 메모. 전체 60개 테스트 통과.
+
+## v1.17 (2026-09-10) — XGBoost 추천 엔진 도입 및 부서 체계를 실제 데이터 기준으로 교체
+
+상세 근거는 `logs/changes/2026-09-10/FOIA-0033-*.md` 참고.
+
+- 배정 추천에 **XGBoost** 엔진을 GBM/LLM과 나란히 추가(`app/services/recommend/
+  xgboost_recommender.py`, `tools/train_xgboost_recommender.py`). GBM/XGBoost가 공유하는
+  모델 캐싱(mtime 기준 자동 재로딩)·순위 필터링 로직을 `base.py`로, 학습 데이터
+  로딩/전처리 로직을 `tools/_training_data.py`로 공통화.
+- 예시용 가상 부서(정보공개팀 등 4개)를, 국정감사 자료요구 배부내역 원본에서 확인한
+  실제 KEPCO 본사 부서 상위 10개(인사처/감사실/노사협력처/법무실/재무처 등)로 교체
+  (`app/deps.py`, `app/services/recommend/synthetic_data.py`).
+- hwp/xlsx 원본을 표 손실 없이 텍스트로 변환하는 도구(`tools/convert_raw_training_data.py`)
+  와 부서 taxonomy 산정용 CSV를 만드는 도구(`tools/build_department_labels.py`) 신규.
+- `requirements.txt`: `xgboost==2.1.4`(3.2.0은 Python 3.8+ 호환 기준 위반이라 다운그레이드).
+- `pytest` 신규 다수(xgboost 엔진, 공유 데이터 로딩), 전체 64개 통과.
+
+## v1.18 (2026-09-10) — CLAUDE.md 아키텍처 문서 신규 작성 및 app.js 섹션 정리
+
+상세 근거는 `logs/changes/2026-09-10/FOIA-0034-*.md` 참고.
+
+- 사용자 요청("코드 통일성/모듈화/AI·개발자가 이어서 작업하기 좋은 문서화")에 따라
+  점검한 결과 핵심 코드(`db.py`, `routers/requests.py` 등)는 이미 일관된 스타일이었음
+  — 대신 처음 보는 사람을 위한 아키텍처 지도가 없었던 게 진짜 공백이라 판단, 루트에
+  `CLAUDE.md`를 신규 작성(모듈 분리 이력, 추천 엔진 플러그인 구조, 로컬 AI 사이드카
+  구조, 인증/CSRF 모델, 테스트 구조 등).
+- 유일하게 구획이 부족했던 `app/static/js/app.js`에 로직 변경 없이 섹션 주석 추가.
+
+## v1.19 (2026-09-10) — PyInstaller onefile 빌드 결함 3건 수정 및 실행.bat 복구
+
+상세 근거는 `logs/changes/2026-09-10/FOIA-0035-*.md` 참고.
+
+- "모든 가능성을 놓고 정밀검진"이라는 요청에 따라 실제로 onefile exe를 빌드해 띄워보고
+  발견한 배포 전용 버그 3건을 수정:
+  1. `GBM_MODEL_PATH`/`XGBOOST_MODEL_PATH`가 exe 옆 쓰기가능 폴더 기준이라 onefile 번들
+     안의 모델 파일을 못 찾던 버그(GBM은 XGBoost 도입 이전부터 있던 기존 결함) —
+     번들 리소스 기준(`RESOURCE_DIR`)으로 수정.
+  2. `sklearn`/`xgboost`/`app.ai_runtime.api`를 앱 코드가 직접 `import`하지 않아(피클
+     역직렬화·문자열 경로로만 참조) PyInstaller가 자동으로 못 찾던 문제 — 빌드 명령에
+     명시적 옵션 추가(`BUILD_ONEFILE.txt`, `INFO_DISCLOSURE_System.spec`).
+  3. **`--add-data "data;data"`로 통째로 묶으면 `.gitignore`로 커밋만 막아둔
+     `data/training/raw/`(개인정보 가능성 있는 원본 문서)가 배포용 exe 안에 그대로
+     박제되는 위험** — `data/models`만 명시적으로 묶도록 축소.
+- README가 "가장 쉬운 실행 방법"으로 안내하는 `실행.bat`가 저장소/git 이력 어디에도
+  없다는 것을 디렉터리 점검 중 발견 — CHANGELOG v1.1 기록을 근거로 복구, 실제 실행해
+  서버 기동 확인.
+- 빌드→실행→로그인→배정 추천 API 호출까지 스크립트로 재현해 각 수정을 실제 검증.
+  `pytest` 64개는 영향 없음(dev 경로는 `RESOURCE_DIR == BASE_DIR`라 동일하게 동작).

@@ -1,3 +1,4 @@
+// ── 상수: 통지 유형 라벨/색상 ─────────────────────────────────────────
 const NOTICE_LABELS = {
   '공개': '공개', '부분공개': '부분공개', '비공개': '비공개',
   '정보부존재': '정보부존재', '진정질의': '진정·질의', '종결': '종결',
@@ -7,6 +8,7 @@ const NOTICE_TONE = {
   '정보부존재': 'precursor', '진정질의': 'info', '종결': 'unknown',
 };
 
+// ── 공통 유틸리티 ──────────────────────────────────────────────────
 function getCsrfToken() {
   const meta = document.querySelector('meta[name="csrf-token"]');
   return meta ? meta.content : '';
@@ -37,6 +39,13 @@ function noticePill(noticeType) {
   return `<span class="status-pill ${tone}">${label}</span>`;
 }
 
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text == null ? '' : String(text);
+  return div.innerHTML;
+}
+
+// ── 대시보드 렌더링 ────────────────────────────────────────────────
 function renderSummaryCards(summary) {
   const root = document.getElementById('summary-cards');
   if (!root) return;
@@ -138,6 +147,7 @@ async function runScan() {
   }
 }
 
+// ── 설정 화면: AI 연동 테스트 ─────────────────────────────────────
 async function testAI(event) {
   event.preventDefault();
   const form = document.getElementById('ai-test-form');
@@ -158,6 +168,7 @@ async function testAI(event) {
   return false;
 }
 
+// ── 청구 상세: 처리기한 연장 · 판단 위저드 · 배정 ─────────────────
 async function extendDeadline(requestId) {
   const reason = prompt('연장 사유를 입력해주세요 (선택 사항, 정보공개법 제11조 제2항 "부득이한 사유"):', '') || '';
   if (!confirm('처리기한을 10일 연장하시겠습니까? 한 청구당 한 번만 가능합니다.')) return;
@@ -224,12 +235,7 @@ async function assignRequestTo(requestId, assignedTo) {
   }
 }
 
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text == null ? '' : String(text);
-  return div.innerHTML;
-}
-
+// ── 담당자 검색(배정용) ───────────────────────────────────────────
 function renderStaffResults(requestId, query) {
   const box = document.getElementById(`staff-results-${requestId}`);
   if (!box) return;
@@ -354,6 +360,7 @@ function initAllStaffSearches() {
   });
 }
 
+// ── AI 배정 추천(예시 조회 · 실제 엔진 생성) ──────────────────────
 async function recommendStaff(requestId, btn) {
   if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
   try {
@@ -423,8 +430,10 @@ async function generateRecommendation(requestId) {
   }
 }
 
-const RECOMMEND_ENGINE_LABELS = { gbm: '📊 GradientBoost 추천', llm: '🧠 LLM 추천' };
-const RECOMMEND_ENGINE_ORDER = ['gbm', 'llm'];
+// `app/services/recommend/ENGINES`(Python)와 키를 맞춰야 한다 — 엔진을 추가/제거하면
+// 여기도 같이 갱신해야 화면에 반영된다(엔진 하나가 화면에서만 안 보이던 회귀 있었음).
+const RECOMMEND_ENGINE_LABELS = { gbm: '📊 GradientBoost 추천', xgboost: '🌲 XGBoost 추천', llm: '🧠 LLM 추천' };
+const RECOMMEND_ENGINE_ORDER = ['gbm', 'xgboost', 'llm'];
 
 function renderEngineComparison(requestId, engines) {
   const box = document.getElementById(`ai-result-${requestId}`);
@@ -456,6 +465,7 @@ function renderEngineComparison(requestId, engines) {
   if (recommendBtn) recommendBtn.style.display = 'none';
 }
 
+// ── 시계 · 대시보드 자동 갱신(폴링) ────────────────────────────────
 function updateClock() {
   const root = document.getElementById('now-clock');
   if (!root) return;
@@ -514,6 +524,7 @@ function initMyQueuePolling() {
   _myQueuePollTimer = setInterval(pollMyQueue, 20000);
 }
 
+// ── 초기화 ─────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   updateClock();
   setInterval(updateClock, 1000);

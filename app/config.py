@@ -33,9 +33,14 @@ AI_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 DB_PATH = Path(os.getenv('FOIA_DB_PATH', str(DATA_DIR / 'info_disclosure.db')))
 
-# 배정 추천 GradientBoost 모델 위치. `tools/train_gbm_recommender.py`가 만들고,
-# `app/services/recommend/gbm_recommender.py`가 읽기만 한다.
-GBM_MODEL_PATH = Path(os.getenv('FOIA_GBM_MODEL_PATH', str(DATA_DIR / 'models' / 'gbm_recommender.joblib')))
+# 배정 추천 모델 위치. `tools/train_gbm_recommender.py`/`tools/train_xgboost_recommender.py`가
+# 빌드 전 소스 트리의 `data/models/`에 미리 만들어두고, 앱은 읽기만 한다 — 그래서
+# 실행 중 쓰기 가능해야 하는 DATA_DIR(exe 옆, 사용자별로 유지되는 DB 등)가 아니라
+# RESOURCE_DIR(onefile 빌드 시 `--add-data`로 묶여 들어가는 읽기전용 번들) 기준으로
+# 잡는다. 일반 실행(비-frozen)에서는 RESOURCE_DIR == BASE_DIR라 동작이 같다 — onefile
+# exe에서 DATA_DIR을 썼다가 모델 파일을 못 찾던 문제가 있었다(실제 빌드로 재현·확인).
+GBM_MODEL_PATH = Path(os.getenv('FOIA_GBM_MODEL_PATH', str(RESOURCE_DIR / 'data' / 'models' / 'gbm_recommender.joblib')))
+XGBOOST_MODEL_PATH = Path(os.getenv('FOIA_XGBOOST_MODEL_PATH', str(RESOURCE_DIR / 'data' / 'models' / 'xgboost_recommender.joblib')))
 AI_SERVER_HOST = os.getenv('FOIA_AI_SERVER_HOST', '127.0.0.1').strip()
 AI_SERVER_PORT = int(os.getenv('FOIA_AI_SERVER_PORT', '8011'))
 INTERNAL_AI_API_URL = f'http://{AI_SERVER_HOST}:{AI_SERVER_PORT}/identify'

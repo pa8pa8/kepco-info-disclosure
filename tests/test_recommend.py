@@ -7,6 +7,7 @@ from app.services.recommend import ENGINES
 from app.services.recommend.gbm_recommender import GBMRecommender
 from app.services.recommend.llm_recommender import LLMRecommender
 from app.services.recommend.synthetic_data import STAFF_BY_DEPARTMENT, generate_training_examples
+from app.services.recommend.xgboost_recommender import XGBoostRecommender
 
 
 def test_gbm_recommender_returns_available_result_for_known_department_text():
@@ -30,6 +31,27 @@ def test_gbm_recommender_unavailable_for_empty_text():
     assert result['recommendations'] == []
 
 
+def test_xgboost_recommender_returns_available_result_for_known_department_text():
+    engine = XGBoostRecommender()
+    row = {
+        'request_target': '정보공개 청구 처리 현황',
+        'raw_text': '서울지역본부 관할 정보공개 청구 관련 자료를 공개해 주시기 바랍니다.',
+    }
+    result = engine.recommend(row)
+    assert result['available'] is True
+    assert result['source'] == 'xgboost'
+    assert 1 <= len(result['recommendations']) <= 3
+    assert all(name.startswith('staff') for name in result['recommendations'])
+    assert result['reason']
+
+
+def test_xgboost_recommender_unavailable_for_empty_text():
+    engine = XGBoostRecommender()
+    result = engine.recommend({'request_target': '', 'raw_text': ''})
+    assert result['available'] is False
+    assert result['recommendations'] == []
+
+
 def test_llm_recommender_reports_not_configured_without_api_key(monkeypatch):
     monkeypatch.delenv('FOIA_LLM_API_KEY', raising=False)
     engine = LLMRecommender()
@@ -39,8 +61,8 @@ def test_llm_recommender_reports_not_configured_without_api_key(monkeypatch):
     assert 'FOIA_LLM_API_KEY' in result['message']
 
 
-def test_engines_registry_has_both_backends():
-    assert set(ENGINES.keys()) == {'gbm', 'llm'}
+def test_engines_registry_has_all_backends():
+    assert set(ENGINES.keys()) == {'gbm', 'xgboost', 'llm'}
 
 
 def test_gbm_recommender_reloads_model_when_file_changes_no_restart_needed(tmp_path, monkeypatch):
@@ -77,6 +99,45 @@ def test_gbm_recommender_reloads_model_when_file_changes_no_restart_needed(tmp_p
     assert second_classes == {'staff1', 'staff2', 'staff3'}, '재학습 후 mtime이 바뀌었는데 이전 모델이 캐시된 채 남아있음'
 
 
+def test_xgboost_recommender_reloads_model_when_file_changes_no_restart_needed(tmp_path, monkeypatch):
+    """FOIA-0031과 같은 이유의 회귀 테스트를 xgboost 엔진에도 둔다."""
+    import joblib
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.pipeline import Pipeline
+    from sklearn.preprocessing import LabelEncoder
+    from xgboost import XGBClassifier
+
+    import app.services.recommend.xgboost_recommender as xgboost_module
+
+    model_path = tmp_path / 'model.joblib'
+    monkeypatch.setattr(xgboost_module, 'XGBOOST_MODEL_PATH', model_path)
+
+    def _train_and_save(labels):
+        texts = [f'샘플 문장 {i}' for i in range(len(labels))]
+        label_encoder = LabelEncoder()
+        encoded = label_encoder.fit_transform(labels)
+        pipeline = Pipeline([
+            ('tfidf', TfidfVectorizer(analyzer='char_wb', ngram_range=(2, 3), min_df=1)),
+            ('xgb', XGBClassifier(random_state=42, n_estimators=5, eval_metric='mlogloss')),
+        ])
+        pipeline.fit(texts, encoded)
+        joblib.dump({'pipeline': pipeline, 'label_encoder': label_encoder}, model_path)
+
+    engine = XGBoostRecommender()
+    assert engine.recommend({'request_target': 'x', 'raw_text': 'x'})['available'] is False  # 모델 없음
+
+    _train_and_save(['staff1', 'staff2'])
+    _, first_encoder = engine._load_model()
+    first_classes = set(first_encoder.classes_)
+    assert first_classes == {'staff1', 'staff2'}
+
+    time.sleep(1.1)  # 파일시스템 mtime 해상도(1초)보다 확실히 크게
+    _train_and_save(['staff1', 'staff2', 'staff3'])
+    _, second_encoder = engine._load_model()
+    second_classes = set(second_encoder.classes_)
+    assert second_classes == {'staff1', 'staff2', 'staff3'}, '재학습 후 mtime이 바뀌었는데 이전 모델이 캐시된 채 남아있음'
+
+
 def test_synthetic_training_examples_cover_every_staff_account():
     examples = generate_training_examples(per_department=20)
     labels = {staff for _, staff in examples}
@@ -90,14 +151,15 @@ def test_synthetic_training_examples_deterministic_with_same_seed():
     assert a == b
 
 
-def test_generate_recommendation_endpoint_returns_both_engines(as_dispatcher, make_request):
+def test_generate_recommendation_endpoint_returns_all_engines(as_dispatcher, make_request):
     request_id = make_request(raw_text='경기지역본부에서 처리한 전기요금 문의 건에 대해 문의드립니다.')
     resp = as_dispatcher.post(f'/api/requests/{request_id}/generate-recommendation')
     assert resp.status_code == 200
     body = resp.json()
     assert body['success'] is True
-    assert set(body['engines'].keys()) == {'gbm', 'llm'}
+    assert set(body['engines'].keys()) == {'gbm', 'xgboost', 'llm'}
     assert body['engines']['gbm']['available'] is True
+    assert body['engines']['xgboost']['available'] is True
     assert body['engines']['llm']['available'] is False
 
 

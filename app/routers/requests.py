@@ -199,8 +199,9 @@ async def api_recommend(request_id: int, request: Request):
 async def api_generate_recommendation(request_id: int, request: Request):
     """"AI로 생성하기" 버튼 핸들러 — 예시 파일이 없는 청구에서 실제 추천 엔진을 돌린다.
 
-    LLM과 GradientBoost 두 엔진을 각각 시도해 나란히 반환한다(둘 다 비교해볼 수 있게).
-    GradientBoost는 실제로 동작하고(합성 데이터로 학습, `tools/train_gbm_recommender.py`),
+    `app/services/recommend/ENGINES`에 등록된 엔진들을 각각 시도해 나란히 반환한다
+    (다 비교해볼 수 있게). GradientBoost·XGBoost는 실제로 동작하고(합성 또는 실제
+    데이터로 학습, `tools/train_gbm_recommender.py`/`tools/train_xgboost_recommender.py`),
     LLM은 아직 인터페이스만 있어 항상 `available: false`를 반환한다
     (`app/services/recommend/llm_recommender.py` 참고).
     """

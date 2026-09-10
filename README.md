@@ -72,7 +72,7 @@ pytest
 
 - 예시 결과 파일이 있으면 → 추천 담당자 1·2·3순위가 표시되고, 클릭하면 그 담당자에게 바로 배정
 - 없으면 → 아직 예시가 준비되지 않았다는 안내와 "AI로 생성하기" 버튼이 뜹니다. 이 버튼을
-  누르면 아래 "배정 추천 엔진" 절의 실제 엔진(GradientBoost/LLM)이 돌아갑니다.
+  누르면 아래 "배정 추천 엔진" 절의 실제 엔진(GradientBoost/XGBoost/LLM)이 돌아갑니다.
 
 `data/watch/`에 넣어둔 예시 청구 10건 중 5건(`202602 01~05`)에는
 `data/ai_recommendations/`에 짝이 되는 결과 파일이 미리 준비되어 있고, 나머지 5건
@@ -86,20 +86,23 @@ pytest
 새 예시를 추가하려면 `data/watch/{파일명}.txt`와 같은 이름으로
 `data/ai_recommendations/{파일명}.txt`를 만들면 됩니다.
 
-## 배정 추천 엔진 (LLM · GradientBoost)
+## 배정 추천 엔진 (LLM · GradientBoost · XGBoost)
 
-"AI로 생성하기"를 누르면 `app/services/recommend/`의 두 엔진을 각각 돌려 나란히
-보여줍니다(둘 다 비교해볼 수 있게). 둘 중 아무 추천이나 클릭하면 바로 배정됩니다.
+"AI로 생성하기"를 누르면 `app/services/recommend/`의 세 엔진을 각각 돌려 나란히
+보여줍니다(서로 비교해볼 수 있게). 아무 추천이나 클릭하면 바로 배정됩니다.
 
-- **GradientBoost** (실제로 동작): 청구 원문을 TF-IDF(문자 2~3-gram, 형태소 분석기
-  없이 동작 — 외부 한글 NLP 라이브러리 의존 없음)로 벡터화해 `GradientBoostingClassifier`로
-  담당자를 예측합니다. 다만 실제 배정 이력이 아직 거의 없어(2026-09-08 기준 10건)
-  부서별 전형적인 청구 문구로 만든 **합성 데이터**로 학습했습니다
+- **GradientBoost**·**XGBoost** (둘 다 실제로 동작): 청구 원문을 TF-IDF(문자
+  2~3-gram, 형태소 분석기 없이 동작 — 외부 한글 NLP 라이브러리 의존 없음)로
+  벡터화해 각각 `GradientBoostingClassifier`/`xgboost.XGBClassifier`로 담당자를
+  예측합니다. 다만 실제 배정 이력이 아직 거의 없어(2026-09-08 기준 10건) 부서별
+  전형적인 청구 문구로 만든 **합성 데이터**로 학습했습니다
   (`app/services/recommend/synthetic_data.py`).
   - **실제 이력으로 재학습하려면**: `data/training/staff_assignments.csv`를 만들고
     (형식은 `data/training/staff_assignments.example.csv`, 자세한 안내는
-    `data/training/README.md`) `python tools/train_gbm_recommender.py`를 실행하세요.
-    이 파일이 있으면 자동으로 실제 데이터를 우선 사용합니다.
+    `data/training/README.md`) `python tools/train_gbm_recommender.py`와
+    `python tools/train_xgboost_recommender.py`를 실행하세요(데이터 로딩은
+    `tools/_training_data.py`를 공유). 이 파일이 있으면 자동으로 실제 데이터를
+    우선 사용합니다.
     **`staff_assignments.csv`는 청구인의 실제 원문(개인정보)을 담으므로 반드시 그
     파일명 그대로 만드세요** — `.gitignore`가 그 이름만 정확히 커밋에서 제외합니다
     (이 저장소는 GitHub 공개 저장소입니다).

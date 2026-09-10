@@ -9,6 +9,9 @@ data/dev_server.log
 # 실제 배정 이력(청구 원문 포함 = 개인정보) — 이 저장소는 GitHub에 올라가므로
 # 절대 커밋하면 안 된다. 형식 예시는 data/training/staff_assignments.example.csv 참고.
 data/training/staff_assignments.csv
+
+# staff_assignments.csv로 가공하기 전의 원본 자료(엑셀/한글 문서, 청구 원문·담당자 정보 포함)
+data/training/raw/
 .installed
 
 # 오래된 백업 zip (app/ 소스와 중복, 최신화되지 않음)

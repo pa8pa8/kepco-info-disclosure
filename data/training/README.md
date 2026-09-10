@@ -39,8 +39,11 @@ text,staff
 
 ```bash
 python tools/train_gbm_recommender.py
+python tools/train_xgboost_recommender.py
 ```
 
-`data/training/staff_assignments.csv`가 있으면 그 실제 데이터로, 없으면 기존처럼
-합성 데이터로 학습합니다. 학습이 끝나면 `data/models/gbm_recommender.joblib`이
-갱신되고, 서버를 재시작하면(또는 다음 요청부터) 바로 반영됩니다.
+두 스크립트 모두 `data/training/staff_assignments.csv`가 있으면 그 실제 데이터로,
+없으면 기존처럼 합성 데이터로 학습합니다(데이터 로딩 로직은 `tools/_training_data.py`
+공유). 학습이 끝나면 각각 `data/models/gbm_recommender.joblib`,
+`data/models/xgboost_recommender.joblib`이 갱신되고, 서버를 재시작하면(또는 다음
+요청부터) 바로 반영됩니다.

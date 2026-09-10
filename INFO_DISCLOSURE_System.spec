@@ -1,18 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_data_files
+from PyInstaller.utils.hooks import collect_dynamic_libs
+from PyInstaller.utils.hooks import collect_all
 
-datas = [('app/templates', 'app/templates'), ('app/static', 'app/static'), ('data', 'data')]
+datas = [('app/templates', 'app/templates'), ('app/static', 'app/static'), ('data/models', 'data/models')]
 binaries = []
-hiddenimports = [
-    'app.main',
-    'app.db',
-    'app.config',
-    'app.services.ai_client',
-    'app.services.local_ai_server',
-    'app.services.request_processor',
-    'app.services.foia_core',
-    'app.ai_runtime.api',
-    'app.ai_runtime.utils_text',
-]
+hiddenimports = ['app.main', 'app.db', 'app.config', 'app.services.ai_client', 'app.services.request_processor', 'app.services.foia_core', 'app.services.local_ai_server', 'app.ai_runtime.api', 'app.ai_runtime.utils_text', 'xgboost', 'xgboost.sklearn']
+datas += collect_data_files('xgboost')
+binaries += collect_dynamic_libs('xgboost')
+tmp_ret = collect_all('sklearn')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
